@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include <factory.hpp>
+#include <mpl.hpp>
 
 int main() {
     std::puts("Hi!");
