@@ -24,4 +24,46 @@ namespace juno {
         using type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
         using type_tag_impl<type>::value;
     };
+
+    template <typename ...L> class type_set_impl;
+    template <typename ...L> struct type_set;
+
+    template <> class type_set_impl<> {
+        template<typename ...> friend struct type_set;
+        template<typename ...> friend class type_set_impl;
+
+        template <typename U>
+        inline constexpr static bool is_in() { return false; }
+        inline constexpr static std::size_t size() { return 0; }
+    };
+
+    template <typename T, typename ...L> class type_set_impl<T, L...>
+            : type_set_impl<L...> {
+        template<typename ...> friend struct type_set;
+        template<typename ...> friend class type_set_impl;
+
+        template <typename U>
+        inline constexpr static bool is_in() {
+            using u = typename std::remove_cv<typename std::remove_reference<U>::type>::type;
+            return std::is_same<u, T>::value || type_set_impl<L...>::template is_in<U>();
+        }
+
+        inline constexpr static std::size_t size() {
+            return 1 + type_set_impl<L...>::size();
+        }
+    };
+
+    template <typename ...L> class type_set_impl<void, L...> : public type_set_impl<L...> { };
+
+    template <typename ...L> struct type_set {
+        using type = type_set_impl<typename std::remove_cv<typename std::remove_reference<L>::type>::type ...>;
+
+        template <typename T>
+        inline constexpr static bool is_in() {
+            return type::template is_in<T>();
+        }
+
+        inline constexpr static std::size_t size() { return type::size(); }
+        inline constexpr static bool empty() { return size() == 0; }
+    };
 }
