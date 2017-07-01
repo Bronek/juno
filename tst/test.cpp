@@ -610,3 +610,42 @@ TEST(test_juno, test_mpl_type_set)
     static_assert(not rri_rrul.is_in<signed long>(), "");
     static_assert(not rri_rrul.is_in<const Foo&>(), "");
 }
+
+TEST(test_juno, test_mpl_type_set_uniqueness)
+{
+    using namespace juno::d;
+
+    // not in empty list
+    static_assert(std::is_same<is_in<int>::result, false_e>::value, "");
+    static_assert(std::is_same<is_in<void>::result, false_e>::value, "");
+
+    // int is not in (void) nor in (long, void*)
+    static_assert(std::is_same<is_in<int, void>::result, false_e>::value, "");
+    static_assert(std::is_same<is_in<int, long, void*>::result, false_e>::value, "");
+
+    // int is in (int, void) and in (int, long, void*), in any order of elements
+    static_assert(std::is_same<is_in<int, int, void>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, void, int>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, int, long, void*>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, int, void*, long>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, long, int, void*>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, long, void*, int>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, void*, long, int>::result, true_e>::value, "");
+    static_assert(std::is_same<is_in<int, void*, int, long>::result, true_e>::value, "");
+
+    static_assert(std::is_same<set<>::result, set<>>::value, "");
+    static_assert(std::is_same<set<int>::result, set<int>>::value, "");
+    static_assert(std::is_same<set<int, int>::result, set<int>>::value, "");
+    static_assert(std::is_same<set<int, int, int>::result, set<int>>::value, "");
+    static_assert(std::is_same<set<int, int, int, int>::result, set<int>>::value, "");
+    static_assert(std::is_same<set<long, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, int, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<int, int, long>::result, set<int, long>>::value, "");
+    static_assert(std::is_same<set<long, int, int, long, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<int, int, long, long, long ,int, int, int, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, int, long, long, long, int, int, long, int>::result, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, long, int, int, long, int, long, long, long, long>::result, set<int, long>>::value, "");
+
+    SUCCEED();
+}

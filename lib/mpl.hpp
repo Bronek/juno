@@ -25,6 +25,59 @@ namespace juno {
         using type_tag_impl<type>::value;
     };
 
+    // details of type_set implementation, to ensure uniqueness of types stored in a set
+    namespace d {
+        enum false_e { };
+        enum true_e { };
+
+        template <typename ...L> struct is_in;
+        template <typename T> struct is_in<T> {
+            using result = false_e;
+        };
+        template <typename T, typename ...L> struct is_in<T, T, L...> {
+            using result = true_e;
+        };
+        template <typename T, typename U, typename ...L> struct is_in<T, U, L...> {
+            using result = typename is_in<T, L...>::result;
+        };
+
+        template <typename T, typename U, typename W> struct select;
+        template <typename U, typename W> struct select<true_e, U, W> {
+            using result = U;
+        };
+        template <typename U, typename W> struct select<false_e, U, W> {
+            using result = W;
+        };
+
+        template <typename ...L> struct set;
+        template <typename ...L> struct join;
+        template <typename T, typename ...L> struct join<T, set<L...>> {
+            using result = set<T, L...>;
+        };
+
+        template <> struct set<> {
+            using result = set<>;
+        };
+        template <typename T, typename ...L> struct set<T, L...> {
+            using result = typename select<
+                typename is_in<T, L...>::result
+                , typename set<L...>::result
+                , typename join<T, typename set<L...>::result>::result
+                >::result;
+        };
+
+        template <typename ...L> struct unpack;
+        template <typename ...L> struct unpack<set<L...>> {
+            using result = L... ;
+        };
+
+        template <typename ...L> struct unique {
+            using result = typename unpack<typename set<
+                typename std::remove_cv<typename std::remove_reference<L>::type>::type ...
+                >::result>::result;
+        };
+    }
+
     template <typename ...L> class type_set_impl;
     template <typename ...L> struct type_set;
 
@@ -56,7 +109,7 @@ namespace juno {
     template <typename ...L> class type_set_impl<void, L...> : public type_set_impl<L...> { };
 
     template <typename ...L> struct type_set {
-        using type = type_set_impl<typename std::remove_cv<typename std::remove_reference<L>::type>::type ...>;
+        using type = type_set_impl<typename d::unique<L...>::result... >;
 
         template <typename T>
         inline constexpr static bool is_in() {
