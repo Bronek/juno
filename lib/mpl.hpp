@@ -58,6 +58,9 @@ namespace juno {
         template <> struct set<> {
             using result = set<>;
         };
+        template <typename ...L> struct set<void, L...> {
+            using result = typename set<L...>::result;
+        };
         template <typename T, typename ...L> struct set<T, L...> {
             using result = typename select<
                 typename is_in<T, L...>::result
@@ -65,23 +68,12 @@ namespace juno {
                 , typename join<T, typename set<L...>::result>::result
                 >::result;
         };
-
-        template <typename ...L> struct unpack;
-        template <typename ...L> struct unpack<set<L...>> {
-            using result = L... ;
-        };
-
-        template <typename ...L> struct unique {
-            using result = typename unpack<typename set<
-                typename std::remove_cv<typename std::remove_reference<L>::type>::type ...
-                >::result>::result;
-        };
     }
 
     template <typename ...L> class type_set_impl;
     template <typename ...L> struct type_set;
 
-    template <> class type_set_impl<> {
+    template <> class type_set_impl<d::set<>> {
         template<typename ...> friend struct type_set;
         template<typename ...> friend class type_set_impl;
 
@@ -90,26 +82,26 @@ namespace juno {
         inline constexpr static std::size_t size() { return 0; }
     };
 
-    template <typename T, typename ...L> class type_set_impl<T, L...>
-            : type_set_impl<L...> {
+    template <typename T, typename ...L> class type_set_impl<d::set<T, L...>>
+            : type_set_impl<d::set<L...>> {
         template<typename ...> friend struct type_set;
         template<typename ...> friend class type_set_impl;
 
         template <typename U>
         inline constexpr static bool is_in() {
             using u = typename std::remove_cv<typename std::remove_reference<U>::type>::type;
-            return std::is_same<u, T>::value || type_set_impl<L...>::template is_in<U>();
+            return std::is_same<u, T>::value || type_set_impl<d::set<L...>>::template is_in<U>();
         }
 
         inline constexpr static std::size_t size() {
-            return 1 + type_set_impl<L...>::size();
+            return 1 + type_set_impl<d::set<L...>>::size();
         }
     };
 
-    template <typename ...L> class type_set_impl<void, L...> : public type_set_impl<L...> { };
-
     template <typename ...L> struct type_set {
-        using type = type_set_impl<typename d::unique<L...>::result... >;
+        using type = type_set_impl<typename d::set<
+            typename std::remove_cv<typename std::remove_reference<L>::type>::type ...
+            >::result>;
 
         template <typename T>
         inline constexpr static bool is_in() {

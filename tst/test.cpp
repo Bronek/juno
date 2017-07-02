@@ -124,6 +124,7 @@ TEST(test_juno, test_mpl_type_set)
 {
     using namespace juno;
 
+    // test removal of "void" type from type_set
     constexpr auto e = type_set<>();
     static_assert(e.empty(), "");
     static_assert(type_set<void>::empty(), "");
@@ -137,18 +138,45 @@ TEST(test_juno, test_mpl_type_set)
     static_assert(not type_set<int, void, void, long, void, void>::empty(), "");
     static_assert(type_set<int, void, void, long, void, void>::size() == 2, "");
 
+    // test removal of duplicate types and "void" from type_set
+    static_assert(std::is_same<type_set<>::type, type_set<void>::type>::value, "");
+    static_assert(std::is_same<type_set<>::type, type_set<void, void>::type>::value, "");
+    static_assert(std::is_same<type_set<>::type, type_set<void, void, void>::type>::value, "");
+    static_assert(std::is_same<type_set<int>::type, type_set<void, int, void>::type>::value, "");
+    static_assert(std::is_same<type_set<int>::type, type_set<void, const int, void, volatile int>::type>::value, "");
+    static_assert(std::is_same<type_set<int>::type, type_set<void, int&&, void, const int&, void, void>::type>::value, "");
+    static_assert(std::is_same<type_set<int>::type, type_set<void, volatile int, void, void>::type>::value, "");
+    static_assert(std::is_same<type_set<int>::type, type_set<void, void, void, const int&>::type>::value, "");
+    static_assert(type_set<void, void, int, const int&&, void, void>::size() == 1, "");
+    static_assert(type_set<
+        int, const int, volatile int, const volatile int
+        , int&, const int&, volatile int&, const volatile int&
+        , int&&, const int&&, volatile int&&, const volatile int&&
+        , long, const long, volatile long, const volatile long
+        , long&, const long&, volatile long&, const volatile long&
+        , long&&, const long&&, volatile long&&, const volatile long&&
+        >::size() == 2, "");
+    static_assert(std::is_same<type_set<
+        int, const int, volatile int, const volatile int, void
+        , int&, const int&, volatile int&, const volatile int&, void, void
+        , int&&, const int&&, volatile int&&, const volatile int&&, void, void, void
+        , long, const long, volatile long, const volatile long, void, void, void, void
+        , long&, const long&, volatile long&, const volatile long&, void, void, void, void, void
+        , long&&, const long&&, volatile long&&, const volatile long&&, void, void, void, void, void, void
+        >::type, type_set<int, long>::type>::value, "");
+
     constexpr auto i = type_set<int>();
     constexpr auto ci = type_set<const int>();
     constexpr auto vi = type_set<volatile int>();
     constexpr auto cvi = type_set<const volatile int>();
-    constexpr auto ri = type_set<int&>();
-    constexpr auto rci = type_set<const int&>();
-    constexpr auto rvi = type_set<volatile int&>();
-    constexpr auto rcvi = type_set<const volatile int&>();
-    constexpr auto rri = type_set<int&&>();
-    constexpr auto rrci = type_set<const int&&>();
-    constexpr auto rrvi = type_set<volatile int&&>();
-    constexpr auto rrcvi = type_set<const volatile int&&>();
+    constexpr auto ri = type_set<int&, void, int&>();
+    constexpr auto rci = type_set<void, const int&, void, const int&>();
+    constexpr auto rvi = type_set<void, void, volatile int&, void, void, volatile int&, void, void>();
+    constexpr auto rcvi = type_set<void, const volatile int&, const volatile int&, void, void>();
+    constexpr auto rri = type_set<int&&, int, void>();
+    constexpr auto rrci = type_set<void, void, const int&&, int&>();
+    constexpr auto rrvi = type_set<void, volatile int&&, void, int&&, void>();
+    constexpr auto rrcvi = type_set<void, void, const volatile int&&, void, const int&, void, void, void>();
 
     static_assert(std::is_same<decltype(i)::type, decltype(ci)::type>::value, "");
     static_assert(std::is_same<decltype(i)::type, decltype(vi)::type>::value, "");
