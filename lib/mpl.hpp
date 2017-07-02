@@ -26,19 +26,17 @@ namespace juno {
     };
 
     // details of type_set implementation, to ensure uniqueness of types stored in a set
+    template <typename ...L> struct type_set;
     namespace d {
         enum false_e { };
         enum true_e { };
 
-        template <typename ...L> struct is_in;
-        template <typename T> struct is_in<T> {
-            using result = false_e;
+        template <typename T> struct to_bool;
+        template <> struct to_bool<false_e> {
+            constexpr static bool value = false;
         };
-        template <typename T, typename ...L> struct is_in<T, T, L...> {
-            using result = true_e;
-        };
-        template <typename T, typename U, typename ...L> struct is_in<T, U, L...> {
-            using result = typename is_in<T, L...>::result;
+        template <> struct to_bool<true_e> {
+            constexpr static bool value = true;
         };
 
         template <typename T, typename U, typename W> struct select;
@@ -49,66 +47,138 @@ namespace juno {
             using result = W;
         };
 
+        template <typename ...L> struct and_;
+        template <typename ...L> struct and_<false_e, L...> {
+            using result = false_e;
+        };
+        template <> struct and_<true_e> {
+            using result = true_e;
+        };
+        template <typename ...L> struct and_<true_e, L...> {
+            using result = typename and_<L...>::result;
+        };
+
+        template <typename ...L> struct is_in;
+        template <typename T> struct is_in<T> {
+            using result = false_e;
+        };
+        template <typename T, typename ...L> struct is_in<void, T, L...> {
+            using result = true_e;
+        };
+        template <typename T, typename ...L> struct is_in<T, T, L...> {
+            using result = true_e;
+        };
+        template <typename T, typename U, typename ...L> struct is_in<T, U, L...> {
+            using result = typename is_in<T, L...>::result;
+        };
+
         template <typename ...L> struct set;
+        template <typename ...L> struct is_in_set;
+        template <typename ...P, typename ...L>  struct is_in_set<set<P...>, set<L...>> {
+            using set_ = set<P...>;
+            using result = typename and_<
+                typename is_in<typename set_::head, L...>::result
+                , typename is_in_set<typename set_::tail, set<L...>>::result
+            >::result;
+        };
+        template <typename ...P, typename ...L>  struct is_in_set<type_set<P...>, set<L...>> {
+            using set_ = typename type_set<P...>::set_;
+            using result = typename and_<
+                typename is_in<typename set_::head, L...>::result
+                , typename is_in_set<typename set_::tail, set<L...>>::result
+                >::result;
+        };
+        template <typename U, typename ...L> struct is_in_set<U, set<L...>> {
+            using result = typename is_in<U, L...>::result;
+        };
+        template <typename ...L> struct is_in_set<set<>, set<L...>> {
+            using result = true_e;
+        };
+
         template <typename ...L> struct join;
         template <typename T, typename ...L> struct join<T, set<L...>> {
             using result = set<T, L...>;
         };
 
         template <> struct set<> {
-            using result = set<>;
-        };
-        template <typename ...L> struct set<void, L...> {
-            using result = typename set<L...>::result;
+            using unique = set<>;
+            using head = void;
+            using tail = set<>;
+
+            template <typename U>
+            inline constexpr static bool is_in() { return false; }
+
+            template <typename U>
+            inline constexpr static bool is_same() {
+                return to_bool<typename and_<
+                    typename is_in_set<U, unique>::result
+                    , typename is_in_set<unique, U>::result
+                >::result>::value;
+            }
+
+            inline constexpr static std::size_t size() { return 0; }
         };
         template <typename T, typename ...L> struct set<T, L...> {
-            using result = typename select<
+            using unique = typename select<
                 typename is_in<T, L...>::result
-                , typename set<L...>::result
-                , typename join<T, typename set<L...>::result>::result
+                , typename set<L...>::unique
+                , typename join<T, typename set<L...>::unique>::result
                 >::result;
+            using head = typename select<
+                typename is_in<T, L...>::result
+                , typename set<L...>::head
+                , T
+            >::result;
+            using tail = typename select<
+                typename is_in<T, L...>::result
+                , typename set<L...>::tail
+                , set<L...>
+            >::result;
+
+            template <typename U>
+            inline constexpr static bool is_in() {
+                return to_bool<typename is_in_set<U, unique>::result>::value;
+            }
+
+            template <typename U>
+            inline constexpr static bool is_same() {
+                return to_bool<typename and_<
+                    typename is_in_set<U, unique>::result
+                    , typename is_in_set<unique, U>::result
+                    >::result>::value;
+            }
+
+            inline constexpr static std::size_t size() { return 1 + set<L...>::size(); }
+        };
+        template <typename ...L> struct set<void, L...> {
+            using unique = typename set<L...>::unique;
+            using head = typename set<L...>::head;
+            using tail = typename set<L...>::tail;
         };
     }
 
-    template <typename ...L> class type_set_impl;
-    template <typename ...L> struct type_set;
-
-    template <> class type_set_impl<d::set<>> {
-        template<typename ...> friend struct type_set;
-        template<typename ...> friend class type_set_impl;
-
-        template <typename U>
-        inline constexpr static bool is_in() { return false; }
-        inline constexpr static std::size_t size() { return 0; }
-    };
-
-    template <typename T, typename ...L> class type_set_impl<d::set<T, L...>>
-            : type_set_impl<d::set<L...>> {
-        template<typename ...> friend struct type_set;
-        template<typename ...> friend class type_set_impl;
-
-        template <typename U>
-        inline constexpr static bool is_in() {
-            using u = typename std::remove_cv<typename std::remove_reference<U>::type>::type;
-            return std::is_same<u, T>::value || type_set_impl<d::set<L...>>::template is_in<U>();
-        }
-
-        inline constexpr static std::size_t size() {
-            return 1 + type_set_impl<d::set<L...>>::size();
-        }
-    };
-
     template <typename ...L> struct type_set {
-        using type = type_set_impl<typename d::set<
+    private:
+        template <typename ...P> friend struct d::is_in_set;
+        template <typename ...P> friend struct type_set;
+        using set_ = typename d::set<
             typename std::remove_cv<typename std::remove_reference<L>::type>::type ...
-            >::result>;
+            >::unique;
 
+    public:
         template <typename T>
         inline constexpr static bool is_in() {
-            return type::template is_in<T>();
+            return set_::template is_in<
+                typename std::remove_cv<typename std::remove_reference<T>::type>::type
+                >();
         }
 
-        inline constexpr static std::size_t size() { return type::size(); }
+        template <typename T>
+        inline constexpr static bool is_same() {
+            return set_::template is_same<typename T::set_>();
+        }
+
+        inline constexpr static std::size_t size() { return set_::size(); }
         inline constexpr static bool empty() { return size() == 0; }
     };
 }

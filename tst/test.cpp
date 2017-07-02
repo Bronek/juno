@@ -139,14 +139,40 @@ TEST(test_juno, test_mpl_type_set)
     static_assert(type_set<int, void, void, long, void, void>::size() == 2, "");
 
     // test removal of duplicate types and "void" from type_set
-    static_assert(std::is_same<type_set<>::type, type_set<void>::type>::value, "");
-    static_assert(std::is_same<type_set<>::type, type_set<void, void>::type>::value, "");
-    static_assert(std::is_same<type_set<>::type, type_set<void, void, void>::type>::value, "");
-    static_assert(std::is_same<type_set<int>::type, type_set<void, int, void>::type>::value, "");
-    static_assert(std::is_same<type_set<int>::type, type_set<void, const int, void, volatile int>::type>::value, "");
-    static_assert(std::is_same<type_set<int>::type, type_set<void, int&&, void, const int&, void, void>::type>::value, "");
-    static_assert(std::is_same<type_set<int>::type, type_set<void, volatile int, void, void>::type>::value, "");
-    static_assert(std::is_same<type_set<int>::type, type_set<void, void, void, const int&>::type>::value, "");
+    static_assert(type_set<>::is_same<type_set<void>>(), "");
+    static_assert(type_set<>::is_same<type_set<void, void>>(), "");
+    static_assert(type_set<>::is_same<type_set<void, void, void>>(), "");
+    static_assert(type_set<void>::is_same<type_set<>>(), "");
+    static_assert(type_set<void, void>::is_same<type_set<>>(), "");
+    static_assert(type_set<void, void, void>::is_same<type_set<>>(), "");
+    static_assert(type_set<void, void, void>::is_same<type_set<void>>(), "");
+    static_assert(type_set<void, void, void>::is_same<type_set<void, void>>(), "");
+    static_assert(type_set<void, void>::is_same<type_set<void, void>>(), "");
+    static_assert(type_set<void, void>::is_same<type_set<void>>(), "");
+    static_assert(type_set<int>::is_same<type_set<void, int, void>>(), "");
+    static_assert(type_set<void, int>::is_same<type_set<void, int, void>>(), "");
+    static_assert(type_set<int>::is_same<type_set<void, const int, void, volatile int>>(), "");
+    static_assert(type_set<int>::is_same<type_set<void, int&&, void, const int&, void, void>>(), "");
+    static_assert(type_set<int>::is_same<type_set<void, volatile int, void, void>>(), "");
+    static_assert(type_set<int>::is_same<type_set<void, void, void, const int&>>(), "");
+    static_assert(type_set<void, void, int, void, const int&&, void>::is_same<type_set<void, void, void, const int&>>(), "");
+
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<void>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<void, void>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<int>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<long&&>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<const unsigned long&>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<volatile long, int>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<void, int&, long&>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<const long&&, const unsigned long&>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<const long&, unsigned long&&, int&&>>(), "");
+    static_assert(type_set<const int, const long, unsigned long&&>::is_in<type_set<const long, unsigned long, int, void, void>>(), "");
+    static_assert(type_set<int, long, unsigned long>::is_in<type_set<const long&, unsigned long&&, int&&>>(), "");
+    static_assert(type_set<int, long, unsigned long>::is_in<type_set<long, unsigned long, int>>(), "");
+    static_assert(not type_set<int, long, unsigned long>::is_in<type_set<long, unsigned long, int, char>>(), "");
+    static_assert(not type_set<int, long, unsigned long>::is_in<type_set<void, unsigned int, void>>(), "");
+
     static_assert(type_set<void, void, int, const int&&, void, void>::size() == 1, "");
     static_assert(type_set<
         int, const int, volatile int, const volatile int
@@ -156,14 +182,14 @@ TEST(test_juno, test_mpl_type_set)
         , long&, const long&, volatile long&, const volatile long&
         , long&&, const long&&, volatile long&&, const volatile long&&
         >::size() == 2, "");
-    static_assert(std::is_same<type_set<
+    static_assert(type_set<
         int, const int, volatile int, const volatile int, void
         , int&, const int&, volatile int&, const volatile int&, void, void
         , int&&, const int&&, volatile int&&, const volatile int&&, void, void, void
         , long, const long, volatile long, const volatile long, void, void, void, void
         , long&, const long&, volatile long&, const volatile long&, void, void, void, void, void
         , long&&, const long&&, volatile long&&, const volatile long&&, void, void, void, void, void, void
-        >::type, type_set<int, long>::type>::value, "");
+        >::is_same<type_set<int, long>>(), "");
 
     constexpr auto i = type_set<int>();
     constexpr auto ci = type_set<const int>();
@@ -178,17 +204,17 @@ TEST(test_juno, test_mpl_type_set)
     constexpr auto rrvi = type_set<void, volatile int&&, void, int&&, void>();
     constexpr auto rrcvi = type_set<void, void, const volatile int&&, void, const int&, void, void, void>();
 
-    static_assert(std::is_same<decltype(i)::type, decltype(ci)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(vi)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(cvi)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(ri)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rci)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rvi)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rcvi)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rri)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rrci)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rrvi)::type>::value, "");
-    static_assert(std::is_same<decltype(i)::type, decltype(rrcvi)::type>::value, "");
+    static_assert(decltype(i)::is_same<decltype(ci)>(), "");
+    static_assert(decltype(i)::is_same<decltype(vi)>(), "");
+    static_assert(decltype(i)::is_same<decltype(cvi)>(), "");
+    static_assert(decltype(i)::is_same<decltype(ri)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rci)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rvi)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rcvi)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rri)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rrci)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rrvi)>(), "");
+    static_assert(decltype(i)::is_same<decltype(rrcvi)>(), "");
 
     static_assert(not i.empty(), "");
     static_assert(not ci.empty(), "");
@@ -520,12 +546,12 @@ TEST(test_juno, test_mpl_type_set)
     constexpr auto rri_rrsl = type_set<int&&, signed long&&>();
     constexpr auto rri_rrul = type_set<int&&, unsigned long&&>();
 
-    static_assert(std::is_same<decltype(rci_rrl)::type, decltype(i_cl)::type>::value, "");
-    static_assert(std::is_same<decltype(rci_rrl)::type, decltype(i_rrl)::type>::value, "");
-    static_assert(std::is_same<decltype(rci_rrl)::type, decltype(i_rsl)::type>::value, "");
-    static_assert(std::is_same<decltype(rci_rrl)::type, decltype(ri_rrcsl)::type>::value, "");
-    static_assert(std::is_same<decltype(rci_rrl)::type, decltype(rri_rrsl)::type>::value, "");
-    static_assert(not std::is_same<decltype(rri_rrsl)::type, decltype(rri_rrul)::type>::value, "");
+    static_assert(decltype(rci_rrl)::is_same<decltype(i_cl)>(), "");
+    static_assert(decltype(rci_rrl)::is_same<decltype(i_rrl)>(), "");
+    static_assert(decltype(rci_rrl)::is_same<decltype(i_rsl)>(), "");
+    static_assert(decltype(rci_rrl)::is_same<decltype(ri_rrcsl)>(), "");
+    static_assert(decltype(rci_rrl)::is_same<decltype(rri_rrsl)>(), "");
+    static_assert(not decltype(rri_rrsl)::is_same<decltype(rri_rrul)>(), "");
 
     static_assert(not rci_rrl.empty(), "");
     static_assert(not i_cl.empty(), "");
@@ -661,19 +687,23 @@ TEST(test_juno, test_mpl_type_set_uniqueness)
     static_assert(std::is_same<is_in<int, void*, long, int>::result, true_e>::value, "");
     static_assert(std::is_same<is_in<int, void*, int, long>::result, true_e>::value, "");
 
-    static_assert(std::is_same<set<>::result, set<>>::value, "");
-    static_assert(std::is_same<set<int>::result, set<int>>::value, "");
-    static_assert(std::is_same<set<int, int>::result, set<int>>::value, "");
-    static_assert(std::is_same<set<int, int, int>::result, set<int>>::value, "");
-    static_assert(std::is_same<set<int, int, int, int>::result, set<int>>::value, "");
-    static_assert(std::is_same<set<long, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, int, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<int, int, long>::result, set<int, long>>::value, "");
-    static_assert(std::is_same<set<long, int, int, long, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<int, int, long, long, long ,int, int, int, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, int, long, long, long, int, int, long, int>::result, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, long, int, int, long, int, long, long, long, long>::result, set<int, long>>::value, "");
+    // unique means no duplicate types, no voids
+    static_assert(std::is_same<set<>::unique, set<>>::value, "");
+    static_assert(std::is_same<set<void>::unique, set<>>::value, "");
+    static_assert(std::is_same<set<void, void>::unique, set<>>::value, "");
+    static_assert(std::is_same<set<void, void, void>::unique, set<>>::value, "");
+    static_assert(std::is_same<set<int>::unique, set<int>>::value, "");
+    static_assert(std::is_same<set<int, void, int>::unique, set<int>>::value, "");
+    static_assert(std::is_same<set<int, int, int>::unique, set<int>>::value, "");
+    static_assert(std::is_same<set<void, int, int, int, int, void, void>::unique, set<int>>::value, "");
+    static_assert(std::is_same<set<long, int, void>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, int>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<long, int, int, void, void, int>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<void, int, int, long>::unique, set<int, long>>::value, "");
+    static_assert(std::is_same<set<long, int, int, long, int>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<int, int, long, long, long ,int, int, int, int>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<void, void, long, int, void, int, long, long, long, int, int, long, int>::unique, set<long, int>>::value, "");
+    static_assert(std::is_same<set<void, long, void, int, long, int, int, long, int, long, long, long, long, void>::unique, set<int, long>>::value, "");
 
     SUCCEED();
 }
