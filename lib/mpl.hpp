@@ -1,3 +1,8 @@
+// Copyright (c) 2017 Bronislaw (Bronek) Kozicki
+//
+// Distributed under the MIT License. See accompanying file license.txt
+// or copy at https://opensource.org/licenses/MIT
+
 #pragma once
 
 #include <type_traits>
