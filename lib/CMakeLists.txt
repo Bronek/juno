@@ -7,7 +7,7 @@ if (TARGET ${PROJECT_NAME})
     message("")
 else()
     set(SOURCE_FILES
-            mpl.hpp mpl.cpp)
+            mpl.hpp mpl.cpp type_tag.hpp type_set.hpp)
 
    add_library(${PROJECT_NAME} ${SOURCE_FILES})
 endif()

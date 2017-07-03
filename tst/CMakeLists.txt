@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(tst)
 
-set(SOURCE_FILES test.cpp)
+set(SOURCE_FILES type_set.cpp type_tag.cpp)
 
 find_package(GTest REQUIRED)
 
