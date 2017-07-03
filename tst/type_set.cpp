@@ -598,3 +598,23 @@ TEST(type_set, test_type_set__size__empty__is_in__is_same)
     static_assert(not rri_rrul.is_in<const Foo&>(), "");
 }
 
+TEST(type_set, test_type_set__join)
+{
+    using namespace juno;
+
+    static_assert(type_set<int, long, unsigned long>::is_same<
+            decltype(type_set<int, long>::join<unsigned long>())
+            >(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<long>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<int>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<void>())>(), "");
+
+    static_assert(type_set<void>::is_same<decltype(type_set<>::join<type_set<>>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::join<type_set<void>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<>::join<type_set<const int, long&&>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int>::join<type_set<int, long>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<type_set<int, long>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long&&>::join<type_set<const int&>>())>(), "");
+
+    SUCCEED();
+}

@@ -56,11 +56,15 @@ namespace juno {
         template <typename T, typename ...L> struct join<T, set<L...>> {
             using result = set<T, L...>;
         };
+        template <typename ...P, typename ...L> struct join<type_set<P...>, set<L...>> {
+            using result = set<P..., L...>;
+        };
 
         template <> struct set<> {
             using unique = set<>;
             using head = void;
             using tail = set<>;
+            using myset = type_set<>;
 
             template <typename U>
             inline constexpr static bool is_in() { return false; }
@@ -73,6 +77,12 @@ namespace juno {
                 >::result>::value;
             }
 
+            template <typename U>
+            inline constexpr static auto join() {
+                using result = typename d::join<U, unique>::result::myset;
+                return result();
+            }
+
             inline constexpr static std::size_t size() { return 0; }
         };
         template <typename T, typename ...L> struct set<T, L...> {
@@ -80,7 +90,7 @@ namespace juno {
             using unique = typename if_<
                     is_in_
                     , typename set<L...>::unique
-                    , typename join<T, typename set<L...>::unique>::result
+                    , typename d::join<T, typename set<L...>::unique>::result
             >::result;
             using head = typename if_<
                     is_in_
@@ -92,6 +102,7 @@ namespace juno {
                     , typename set<L...>::tail
                     , set<L...>
             >::result;
+            using myset = type_set<T, L...>;
 
             template <typename U>
             inline constexpr static bool is_in() {
@@ -106,12 +117,22 @@ namespace juno {
                 >::result>::value;
             }
 
+            template <typename U>
+            inline constexpr static auto join() {
+                using result = typename if_<typename d::is_in_set<U, unique>::result
+                        , myset
+                        , typename d::join<U, unique>::result::myset
+                >::result;
+                return result();
+            }
+
             inline constexpr static std::size_t size() { return 1 + set<L...>::size(); }
         };
         template <typename ...L> struct set<void, L...> {
             using unique = typename set<L...>::unique;
             using head = typename set<L...>::head;
             using tail = typename set<L...>::tail;
+            using myset = typename set<L...>::myset;
         };
     }
 
@@ -134,6 +155,13 @@ namespace juno {
         template <typename T>
         inline constexpr static bool is_same() {
             return set_::template is_same<typename T::set_>();
+        }
+
+        template <typename T>
+        inline constexpr static auto join() {
+            return set_::template join<
+                    typename std::remove_cv<typename std::remove_reference<T>::type>::type
+            >();
         }
 
         inline constexpr static std::size_t size() { return set_::size(); }
