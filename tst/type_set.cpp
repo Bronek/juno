@@ -9,67 +9,230 @@
 
 #include <type_set.hpp>
 
-TEST(type_set, test_type_set__unique)
+TEST(type_set, type_set__basic)
 {
+    // sanity checks of basic use cases
     using namespace juno;
-    using namespace juno::d;
 
-    // not in empty list
-    static_assert(std::is_same<is_in<int>::result, false_>::value, "");
-    static_assert(std::is_same<is_in<void>::result, false_>::value, "");
+    // incomplete types are OK
+    struct Foo; struct Bar; struct Fuz; union Baz;
 
-    // int is not in (void) nor in (long, void*)
-    static_assert(std::is_same<is_in<int, void>::result, false_>::value, "");
-    static_assert(std::is_same<is_in<int, long, void*>::result, false_>::value, "");
+    // empty set is an empty set
+    static_assert(type_set<>::is_same<type_set<>>(), "");
+    static_assert(type_set<>::is_same_setof<>(), "");
+    static_assert(type_set<>::empty(), "");
+    static_assert(type_set<>::size() == 0, "");
 
-    // int is in (int, void) and in (int, long, void*), in any order of elements
-    static_assert(std::is_same<is_in<int, int, void>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, void, int>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, int, long, void*>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, int, void*, long>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, long, int, void*>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, long, void*, int>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, void*, long, int>::result, true_>::value, "");
-    static_assert(std::is_same<is_in<int, void*, int, long>::result, true_>::value, "");
+    // void can be used to denote a non-element
+    static_assert(type_set<void>::empty(), "");
+    static_assert(type_set<void>::size() == 0, "");
+    static_assert(type_set<void, void>::empty(), "");
+    static_assert(type_set<void, void>::size() == 0, "");
+    static_assert(type_set<>::is_same<type_set<void>>(), "");
+    static_assert(type_set<>::is_same<type_set<void, void>>(), "");
+    static_assert(type_set<>::is_same_setof<void, void, void>(), "");
+    static_assert(type_set<void>::is_same<type_set<>>(), "");
+    static_assert(type_set<void>::is_same<type_set<void>>(), "");
+    static_assert(type_set<void, void>::is_same_setof<>(), "");
+    static_assert(type_set<int, void>::is_same<type_set<int>>(), "");
+    static_assert(type_set<int, void>::size() == 1, "");
+    static_assert(not type_set<int, void>::empty(), "");
+    static_assert(type_set<int, void, void>::size() == 1, "");
+    static_assert(type_set<void, void, int, void, void>::size() == 1, "");
+    static_assert(type_set<int>::is_same_setof<void, int, void>(), "");
+    static_assert(not type_set<int>::is_same<type_set<void>>(), "");
+    static_assert(not type_set<void>::is_same<type_set<int>>(), "");
 
-    // unique means no duplicate types, no voids
-    static_assert(std::is_same<set<>::unique, set<>>::value, "");
-    static_assert(std::is_same<set<void>::unique, set<>>::value, "");
-    static_assert(std::is_same<set<void, void>::unique, set<>>::value, "");
-    static_assert(std::is_same<set<void, void, void>::unique, set<>>::value, "");
-    static_assert(std::is_same<set<int>::unique, set<int>>::value, "");
-    static_assert(std::is_same<set<int, void, int>::unique, set<int>>::value, "");
-    static_assert(std::is_same<set<int, int, int>::unique, set<int>>::value, "");
-    static_assert(std::is_same<set<void, int, int, int, int, void, void>::unique, set<int>>::value, "");
-    static_assert(std::is_same<set<long, int, void>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, int>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<long, int, int, void, void, int>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<void, int, int, long>::unique, set<int, long>>::value, "");
-    static_assert(std::is_same<set<long, int, int, long, int>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<int, int, long, long, long ,int, int, int, int>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<void, void, long, int, void, int, long, long, long, int, int, long, int>::unique, set<long, int>>::value, "");
-    static_assert(std::is_same<set<void, long, void, int, long, int, int, long, int, long, long, long, long, void>::unique, set<int, long>>::value, "");
+    // empty set can be found in any set
+    static_assert(type_set<>::is_in<type_set<>>(), "");
+    static_assert(type_set<void>::is_in<type_set<>>(), "");
+    static_assert(type_set<void>::is_in_setof<>(), "");
+    static_assert(type_set<>::is_in_setof<void>(), "");
+    static_assert(type_set<>::is_in<type_set<void, void>>(), "");
+    static_assert(type_set<>::is_in_setof<void, void>(), "");
+    static_assert(type_set<void, int>::is_in<type_set<void>>(), "");
+    static_assert(type_set<void, int>::is_in<type_set<>>(), "");
+    static_assert(type_set<Foo, int>::is_in<type_set<>>(), "");
+    static_assert(type_set<int>::is_in_setof<>(), "");
+    static_assert(type_set<int, Baz>::is_in_setof<>(), "");
+    static_assert(type_set<int>::is_in_setof<void>(), "");
+
+    // ordering of elements is ignored and duplicate elements are ignored
+    static_assert(type_set<int, long>::is_same_setof<int, long>(), "");
+    static_assert(type_set<int, long>::is_same_setof<long, int>(), "");
+    static_assert(type_set<int, long>::is_same_setof<int, long, int>(), "");
+    static_assert(type_set<int, long>::size() == 2, "");
+    static_assert(type_set<long, int, long>::is_same_setof<int, long, int>(), "");
+    static_assert(type_set<long, int, long>::size() == 2, "");
+    static_assert(not type_set<long, int, long>::is_same_setof<int>(), "");
+    static_assert(not type_set<long, int, long>::is_same_setof<long, long>(), "");
+    static_assert(type_set<int, long, void>::is_same_setof<long, long, int, int>(), "");
+    static_assert(type_set<int, long, void>::size() == 2, "");
+
+    // elements are stripped of reference and cv-qualifiers before any operation
+    typedef type_set<Foo, Bar, int, const int, int&&> setA;
+    static_assert(setA::is_same_setof<Bar, Foo, int>(), "");
+    static_assert(setA::is_same_setof<Foo, Bar, const int&>(), "");
+    static_assert(not setA::empty(), "");
+    static_assert(setA::size() == 3, "");
+    typedef type_set<const Foo, void, const volatile Fuz, Baz&> setB;
+    static_assert(setB::is_same_setof<Baz&&, Foo&&, Fuz&&>(), "");
+    static_assert(not setB::is_same<setA>(), "");
+    static_assert(not setB::empty(), "");
+    static_assert(setB::size() == 3, "");
+    static_assert(type_set<void, void, int, const int&&, void, void>::size() == 1, "");
+    static_assert(type_set<
+            int, const int, volatile int, const volatile int
+            , int&, const int&, volatile int&, const volatile int&
+            , int&&, const int&&, volatile int&&, const volatile int&&
+            , long, const long, volatile long, const volatile long
+            , long&, const long&, volatile long&, const volatile long&
+            , long&&, const long&&, volatile long&&, const volatile long&&>::size() == 2, "");
+    static_assert(type_set<
+            int, const int, volatile int, const volatile int, void
+            , int&, const int&, volatile int&, const volatile int&, void, void
+            , int&&, const int&&, volatile int&&, const volatile int&&, void, void, void
+            , long, const long, volatile long, const volatile long, void, void, void, void
+            , long&, const long&, volatile long&, const volatile long&, void, void, void, void, void
+            , long&&, const long&&, volatile long&&, const volatile long&&, void, void, void, void, void, void
+    >::is_same<type_set<int, long>>(), "");
+
+    // "join" performs union of sets
+    typedef decltype(setA::join<setB>()) setAB;
+    static_assert(setAB::is_same<type_set<int, Foo, Fuz, Baz, Bar>>(), "");
+    static_assert(setAB::is_same_setof<Bar, Baz, int, Foo, Fuz>(), "");
+    static_assert(not setAB::empty(), "");
+    static_assert(setAB::size() == 5, "");
+    static_assert(not setAB::is_same_setof<Foo>(), "");
+    static_assert(not setAB::is_same<setA>(), "");
+    static_assert(not setAB::is_same<setB>(), "");
+    static_assert(not setAB::is_same<type_set<Bar, Baz, int>>(), "");
+    static_assert(setAB::is_same<decltype(setA::join_setof<Fuz, Baz>())>(), "");
+
+    // union of sets is commutative
+    static_assert(setAB::is_same<decltype(setB::join<setA>())>(), "");
+    static_assert(setAB::is_same<decltype(setB::join_setof<int, Bar, Foo>())>(), "");
+
+    // more testing of join
+    static_assert(type_set<int, long, unsigned long>::is_same<
+            decltype(type_set<int, long>::join_setof<unsigned long>())
+    >(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join_setof<long>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join_setof<int>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join_setof<int, long>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join_setof<void>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join_setof<>())>(), "");
+
+    static_assert(type_set<void>::is_same<decltype(type_set<>::join<type_set<>>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::join<type_set<void>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<>::join<type_set<const int, long&&>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int>::join<type_set<int, long>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<type_set<int, long>>())>(), "");
+    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long&&>::join<type_set<const int&>>())>(), "");
+
+    // counting elements in the set respects uniqueness rules
 
     SUCCEED();
 }
 
-TEST(type_set, test_type_set__size__empty__is_in__is_same)
+TEST(type_set, type_set__details_unique)
+{
+    // test that duplicate elements are ignored and void is used to denote non-element
+    // these are implementation details of set::unique which itself is implementation
+    // detail of type_set
+    using namespace juno;
+    struct Foo; struct Bar;
+
+    // can't find actual type in an empty list
+    static_assert(std::is_same<d::is_in<int>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Foo>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<int, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Foo, void, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Foo, void, void, void>::result, false_>::value, "");
+
+    // can find void, i.e. no-element, in any list including empty one
+    static_assert(std::is_same<d::is_in<void>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<void, void>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo, void, bool>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo, Bar, int, bool>::result, true_>::value, "");
+
+    // look for actual type where we expect to find it
+    static_assert(std::is_same<d::is_in<int, int>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, int, void>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, int>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, int, void>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, void, int>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, int, long, Foo>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, Foo, Bar, long, int>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, Foo, void, void, int, void>::result, true_>::value, "");
+
+    // look for actual type where we do not expect to find it
+    static_assert(std::is_same<d::is_in<Bar, int>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, int, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, int>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, int, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, void, int>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, int, long, Foo>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, Foo, bool, long, int>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, Foo, void, void, int, void>::result, false_>::value, "");
+
+    // unique means no duplicate types, no voids
+    static_assert(std::is_same<
+            d::set<>::unique
+            , d::set<>>::value, "");
+    static_assert(std::is_same<
+            d::set<void>::unique
+            , d::set<>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, void>::unique
+            , d::set<>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, void, void>::unique
+            , d::set<>>::value, "");
+    static_assert(std::is_same<
+            d::set<int>::unique
+            , d::set<int>>::value, "");
+    static_assert(std::is_same<
+            d::set<int, void, int>::unique
+            , d::set<int>>::value, "");
+    static_assert(std::is_same<
+            d::set<int, int, int>::unique
+            , d::set<int>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, int, int, int, int, void, void>::unique
+            , d::set<int>>::value, "");
+    static_assert(std::is_same<
+            d::set<long, int, void>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<long, int, int>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<long, int, int, void, void, int>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, int, int, long>::unique
+            , d::set<int, long>>::value, "");
+    static_assert(std::is_same<
+            d::set<long, int, int, long, int>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<int, int, long, long, long ,int, int, int, int>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, void, long, int, void, int, long, long, long, int, int, long, int>::unique
+            , d::set<long, int>>::value, "");
+    static_assert(std::is_same<
+            d::set<void, long, void, int, long, int, int, long, int, long, long, long, long, void>::unique
+            , d::set<int, long>>::value, "");
+
+    SUCCEED();
+}
+
+TEST(type_set, type_set__extensive__void_and_ref_cv_stripping)
 {
     using namespace juno;
-
-    // test removal of "void" type from type_set
-    constexpr auto e = type_set<>();
-    static_assert(e.empty(), "");
-    static_assert(type_set<void>::empty(), "");
-    static_assert(type_set<void>::size() == 0, "");
-    static_assert(type_set<void, void, void>::empty(), "");
-    static_assert(type_set<void, void, void>::size() == 0, "");
-    static_assert(not type_set<void, int, void>::empty(), "");
-    static_assert(type_set<void, int, void>::size() == 1, "");
-    static_assert(not type_set<void, int, void, void, long>::empty(), "");
-    static_assert(type_set<void, int, void, void, long>::size() == 2, "");
-    static_assert(not type_set<int, void, void, long, void, void>::empty(), "");
-    static_assert(type_set<int, void, void, long, void, void>::size() == 2, "");
 
     // test removal of duplicate types and "void" from type_set
     static_assert(type_set<>::is_same<type_set<void>>(), "");
@@ -106,24 +269,7 @@ TEST(type_set, test_type_set__size__empty__is_in__is_same)
     static_assert(not type_set<int, long, unsigned long>::is_in<type_set<long, unsigned long, int, char>>(), "");
     static_assert(not type_set<int, long, unsigned long>::is_in<type_set<void, unsigned int, void>>(), "");
 
-    static_assert(type_set<void, void, int, const int&&, void, void>::size() == 1, "");
-    static_assert(type_set<
-        int, const int, volatile int, const volatile int
-        , int&, const int&, volatile int&, const volatile int&
-        , int&&, const int&&, volatile int&&, const volatile int&&
-        , long, const long, volatile long, const volatile long
-        , long&, const long&, volatile long&, const volatile long&
-        , long&&, const long&&, volatile long&&, const volatile long&&
-        >::size() == 2, "");
-    static_assert(type_set<
-        int, const int, volatile int, const volatile int, void
-        , int&, const int&, volatile int&, const volatile int&, void, void
-        , int&&, const int&&, volatile int&&, const volatile int&&, void, void, void
-        , long, const long, volatile long, const volatile long, void, void, void, void
-        , long&, const long&, volatile long&, const volatile long&, void, void, void, void, void
-        , long&&, const long&&, volatile long&&, const volatile long&&, void, void, void, void, void, void
-        >::is_same<type_set<int, long>>(), "");
-
+    // all of these are the same set<int>
     constexpr auto i = type_set<int>();
     constexpr auto ci = type_set<const int>();
     constexpr auto vi = type_set<volatile int>();
@@ -148,6 +294,17 @@ TEST(type_set, test_type_set__size__empty__is_in__is_same)
     static_assert(decltype(i)::is_same<decltype(rrci)>(), "");
     static_assert(decltype(i)::is_same<decltype(rrvi)>(), "");
     static_assert(decltype(i)::is_same<decltype(rrcvi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(ci)>(), "");
+    static_assert(decltype(i)::is_in<decltype(vi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(cvi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(ri)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rci)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rvi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rcvi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rri)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rrci)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rrvi)>(), "");
+    static_assert(decltype(i)::is_in<decltype(rrcvi)>(), "");
 
     static_assert(not i.empty(), "");
     static_assert(not ci.empty(), "");
@@ -174,309 +331,311 @@ TEST(type_set, test_type_set__size__empty__is_in__is_same)
     static_assert(rrvi.size() == 1, "");
     static_assert(rrcvi.size() == 1, "");
 
-    static_assert(i.is_in<int>(), "");
-    static_assert(i.is_in<const int>(), "");
-    static_assert(i.is_in<volatile int>(), "");
-    static_assert(i.is_in<const volatile int>(), "");
-    static_assert(i.is_in<int&>(), "");
-    static_assert(i.is_in<const int&>(), "");
-    static_assert(i.is_in<volatile int&>(), "");
-    static_assert(i.is_in<const volatile int&>(), "");
-    static_assert(i.is_in<int&&>(), "");
-    static_assert(i.is_in<const int&&>(), "");
-    static_assert(i.is_in<volatile int&&>(), "");
-    static_assert(i.is_in<const volatile int&&>(), "");
-    static_assert(i.is_in<signed int>(), "");
-    static_assert(i.is_in<const signed int>(), "");
-    static_assert(i.is_in<volatile signed int>(), "");
-    static_assert(i.is_in<const volatile signed int>(), "");
-    static_assert(i.is_in<signed int&>(), "");
-    static_assert(i.is_in<const signed int&>(), "");
-    static_assert(i.is_in<volatile signed int&>(), "");
-    static_assert(i.is_in<const volatile signed int&>(), "");
-    static_assert(i.is_in<signed int&&>(), "");
-    static_assert(i.is_in<const signed int&&>(), "");
-    static_assert(i.is_in<volatile signed int&&>(), "");
-    static_assert(i.is_in<const volatile signed int&&>(), "");
-    static_assert(ci.is_in<int>(), "");
-    static_assert(ci.is_in<const int>(), "");
-    static_assert(ci.is_in<volatile int>(), "");
-    static_assert(ci.is_in<const volatile int>(), "");
-    static_assert(ci.is_in<int&>(), "");
-    static_assert(ci.is_in<const int&>(), "");
-    static_assert(ci.is_in<volatile int&>(), "");
-    static_assert(ci.is_in<const volatile int&>(), "");
-    static_assert(ci.is_in<int&&>(), "");
-    static_assert(ci.is_in<const int&&>(), "");
-    static_assert(ci.is_in<volatile int&&>(), "");
-    static_assert(ci.is_in<const volatile int&&>(), "");
-    static_assert(ci.is_in<signed int>(), "");
-    static_assert(ci.is_in<const signed int>(), "");
-    static_assert(ci.is_in<volatile signed int>(), "");
-    static_assert(ci.is_in<const volatile signed int>(), "");
-    static_assert(ci.is_in<signed int&>(), "");
-    static_assert(ci.is_in<const signed int&>(), "");
-    static_assert(ci.is_in<volatile signed int&>(), "");
-    static_assert(ci.is_in<const volatile signed int&>(), "");
-    static_assert(ci.is_in<signed int&&>(), "");
-    static_assert(ci.is_in<const signed int&&>(), "");
-    static_assert(ci.is_in<volatile signed int&&>(), "");
-    static_assert(ci.is_in<const volatile signed int&&>(), "");
-    static_assert(vi.is_in<int>(), "");
-    static_assert(vi.is_in<const int>(), "");
-    static_assert(vi.is_in<volatile int>(), "");
-    static_assert(vi.is_in<const volatile int>(), "");
-    static_assert(vi.is_in<int&>(), "");
-    static_assert(vi.is_in<const int&>(), "");
-    static_assert(vi.is_in<volatile int&>(), "");
-    static_assert(vi.is_in<const volatile int&>(), "");
-    static_assert(vi.is_in<int&&>(), "");
-    static_assert(vi.is_in<const int&&>(), "");
-    static_assert(vi.is_in<volatile int&&>(), "");
-    static_assert(vi.is_in<const volatile int&&>(), "");
-    static_assert(vi.is_in<signed int>(), "");
-    static_assert(vi.is_in<const signed int>(), "");
-    static_assert(vi.is_in<volatile signed int>(), "");
-    static_assert(vi.is_in<const volatile signed int>(), "");
-    static_assert(vi.is_in<signed int&>(), "");
-    static_assert(vi.is_in<const signed int&>(), "");
-    static_assert(vi.is_in<volatile signed int&>(), "");
-    static_assert(vi.is_in<const volatile signed int&>(), "");
-    static_assert(vi.is_in<signed int&&>(), "");
-    static_assert(vi.is_in<const signed int&&>(), "");
-    static_assert(vi.is_in<volatile signed int&&>(), "");
-    static_assert(vi.is_in<const volatile signed int&&>(), "");
-    static_assert(cvi.is_in<int>(), "");
-    static_assert(cvi.is_in<const int>(), "");
-    static_assert(cvi.is_in<volatile int>(), "");
-    static_assert(cvi.is_in<const volatile int>(), "");
-    static_assert(cvi.is_in<int&>(), "");
-    static_assert(cvi.is_in<const int&>(), "");
-    static_assert(cvi.is_in<volatile int&>(), "");
-    static_assert(cvi.is_in<const volatile int&>(), "");
-    static_assert(cvi.is_in<int&&>(), "");
-    static_assert(cvi.is_in<const int&&>(), "");
-    static_assert(cvi.is_in<volatile int&&>(), "");
-    static_assert(cvi.is_in<const volatile int&&>(), "");
-    static_assert(cvi.is_in<signed int>(), "");
-    static_assert(cvi.is_in<const signed int>(), "");
-    static_assert(cvi.is_in<volatile signed int>(), "");
-    static_assert(cvi.is_in<const volatile signed int>(), "");
-    static_assert(cvi.is_in<signed int&>(), "");
-    static_assert(cvi.is_in<const signed int&>(), "");
-    static_assert(cvi.is_in<volatile signed int&>(), "");
-    static_assert(cvi.is_in<const volatile signed int&>(), "");
-    static_assert(cvi.is_in<signed int&&>(), "");
-    static_assert(cvi.is_in<const signed int&&>(), "");
-    static_assert(cvi.is_in<volatile signed int&&>(), "");
-    static_assert(cvi.is_in<const volatile signed int&&>(), "");
-    static_assert(ri.is_in<int>(), "");
-    static_assert(ri.is_in<const int>(), "");
-    static_assert(ri.is_in<volatile int>(), "");
-    static_assert(ri.is_in<const volatile int>(), "");
-    static_assert(ri.is_in<int&>(), "");
-    static_assert(ri.is_in<const int&>(), "");
-    static_assert(ri.is_in<volatile int&>(), "");
-    static_assert(ri.is_in<const volatile int&>(), "");
-    static_assert(ri.is_in<int&&>(), "");
-    static_assert(ri.is_in<const int&&>(), "");
-    static_assert(ri.is_in<volatile int&&>(), "");
-    static_assert(ri.is_in<const volatile int&&>(), "");
-    static_assert(ri.is_in<signed int>(), "");
-    static_assert(ri.is_in<const signed int>(), "");
-    static_assert(ri.is_in<volatile signed int>(), "");
-    static_assert(ri.is_in<const volatile signed int>(), "");
-    static_assert(ri.is_in<signed int&>(), "");
-    static_assert(ri.is_in<const signed int&>(), "");
-    static_assert(ri.is_in<volatile signed int&>(), "");
-    static_assert(ri.is_in<const volatile signed int&>(), "");
-    static_assert(ri.is_in<signed int&&>(), "");
-    static_assert(ri.is_in<const signed int&&>(), "");
-    static_assert(ri.is_in<volatile signed int&&>(), "");
-    static_assert(ri.is_in<const volatile signed int&&>(), "");
-    static_assert(rci.is_in<int>(), "");
-    static_assert(rci.is_in<const int>(), "");
-    static_assert(rci.is_in<volatile int>(), "");
-    static_assert(rci.is_in<const volatile int>(), "");
-    static_assert(rci.is_in<int&>(), "");
-    static_assert(rci.is_in<const int&>(), "");
-    static_assert(rci.is_in<volatile int&>(), "");
-    static_assert(rci.is_in<const volatile int&>(), "");
-    static_assert(rci.is_in<int&&>(), "");
-    static_assert(rci.is_in<const int&&>(), "");
-    static_assert(rci.is_in<volatile int&&>(), "");
-    static_assert(rci.is_in<const volatile int&&>(), "");
-    static_assert(rci.is_in<signed int>(), "");
-    static_assert(rci.is_in<const signed int>(), "");
-    static_assert(rci.is_in<volatile signed int>(), "");
-    static_assert(rci.is_in<const volatile signed int>(), "");
-    static_assert(rci.is_in<signed int&>(), "");
-    static_assert(rci.is_in<const signed int&>(), "");
-    static_assert(rci.is_in<volatile signed int&>(), "");
-    static_assert(rci.is_in<const volatile signed int&>(), "");
-    static_assert(rci.is_in<signed int&&>(), "");
-    static_assert(rci.is_in<const signed int&&>(), "");
-    static_assert(rci.is_in<volatile signed int&&>(), "");
-    static_assert(rci.is_in<const volatile signed int&&>(), "");
-    static_assert(rvi.is_in<int>(), "");
-    static_assert(rvi.is_in<const int>(), "");
-    static_assert(rvi.is_in<volatile int>(), "");
-    static_assert(rvi.is_in<const volatile int>(), "");
-    static_assert(rvi.is_in<int&>(), "");
-    static_assert(rvi.is_in<const int&>(), "");
-    static_assert(rvi.is_in<volatile int&>(), "");
-    static_assert(rvi.is_in<const volatile int&>(), "");
-    static_assert(rvi.is_in<int&&>(), "");
-    static_assert(rvi.is_in<const int&&>(), "");
-    static_assert(rvi.is_in<volatile int&&>(), "");
-    static_assert(rvi.is_in<const volatile int&&>(), "");
-    static_assert(rvi.is_in<signed int>(), "");
-    static_assert(rvi.is_in<const signed int>(), "");
-    static_assert(rvi.is_in<volatile signed int>(), "");
-    static_assert(rvi.is_in<const volatile signed int>(), "");
-    static_assert(rvi.is_in<signed int&>(), "");
-    static_assert(rvi.is_in<const signed int&>(), "");
-    static_assert(rvi.is_in<volatile signed int&>(), "");
-    static_assert(rvi.is_in<const volatile signed int&>(), "");
-    static_assert(rvi.is_in<signed int&&>(), "");
-    static_assert(rvi.is_in<const signed int&&>(), "");
-    static_assert(rvi.is_in<volatile signed int&&>(), "");
-    static_assert(rvi.is_in<const volatile signed int&&>(), "");
-    static_assert(rcvi.is_in<int>(), "");
-    static_assert(rcvi.is_in<const int>(), "");
-    static_assert(rcvi.is_in<volatile int>(), "");
-    static_assert(rcvi.is_in<const volatile int>(), "");
-    static_assert(rcvi.is_in<int&>(), "");
-    static_assert(rcvi.is_in<const int&>(), "");
-    static_assert(rcvi.is_in<volatile int&>(), "");
-    static_assert(rcvi.is_in<const volatile int&>(), "");
-    static_assert(rcvi.is_in<int&&>(), "");
-    static_assert(rcvi.is_in<const int&&>(), "");
-    static_assert(rcvi.is_in<volatile int&&>(), "");
-    static_assert(rcvi.is_in<const volatile int&&>(), "");
-    static_assert(rcvi.is_in<signed int>(), "");
-    static_assert(rcvi.is_in<const signed int>(), "");
-    static_assert(rcvi.is_in<volatile signed int>(), "");
-    static_assert(rcvi.is_in<const volatile signed int>(), "");
-    static_assert(rcvi.is_in<signed int&>(), "");
-    static_assert(rcvi.is_in<const signed int&>(), "");
-    static_assert(rcvi.is_in<volatile signed int&>(), "");
-    static_assert(rcvi.is_in<const volatile signed int&>(), "");
-    static_assert(rcvi.is_in<signed int&&>(), "");
-    static_assert(rcvi.is_in<const signed int&&>(), "");
-    static_assert(rcvi.is_in<volatile signed int&&>(), "");
-    static_assert(rcvi.is_in<const volatile signed int&&>(), "");
-    static_assert(rri.is_in<int>(), "");
-    static_assert(rri.is_in<const int>(), "");
-    static_assert(rri.is_in<volatile int>(), "");
-    static_assert(rri.is_in<const volatile int>(), "");
-    static_assert(rri.is_in<int&>(), "");
-    static_assert(rri.is_in<const int&>(), "");
-    static_assert(rri.is_in<volatile int&>(), "");
-    static_assert(rri.is_in<const volatile int&>(), "");
-    static_assert(rri.is_in<int&&>(), "");
-    static_assert(rri.is_in<const int&&>(), "");
-    static_assert(rri.is_in<volatile int&&>(), "");
-    static_assert(rri.is_in<const volatile int&&>(), "");
-    static_assert(rri.is_in<signed int>(), "");
-    static_assert(rri.is_in<const signed int>(), "");
-    static_assert(rri.is_in<volatile signed int>(), "");
-    static_assert(rri.is_in<const volatile signed int>(), "");
-    static_assert(rri.is_in<signed int&>(), "");
-    static_assert(rri.is_in<const signed int&>(), "");
-    static_assert(rri.is_in<volatile signed int&>(), "");
-    static_assert(rri.is_in<const volatile signed int&>(), "");
-    static_assert(rri.is_in<signed int&&>(), "");
-    static_assert(rri.is_in<const signed int&&>(), "");
-    static_assert(rri.is_in<volatile signed int&&>(), "");
-    static_assert(rri.is_in<const volatile signed int&&>(), "");
-    static_assert(rrci.is_in<int>(), "");
-    static_assert(rrci.is_in<const int>(), "");
-    static_assert(rrci.is_in<volatile int>(), "");
-    static_assert(rrci.is_in<const volatile int>(), "");
-    static_assert(rrci.is_in<int&>(), "");
-    static_assert(rrci.is_in<const int&>(), "");
-    static_assert(rrci.is_in<volatile int&>(), "");
-    static_assert(rrci.is_in<const volatile int&>(), "");
-    static_assert(rrci.is_in<int&&>(), "");
-    static_assert(rrci.is_in<const int&&>(), "");
-    static_assert(rrci.is_in<volatile int&&>(), "");
-    static_assert(rrci.is_in<const volatile int&&>(), "");
-    static_assert(rrci.is_in<signed int>(), "");
-    static_assert(rrci.is_in<const signed int>(), "");
-    static_assert(rrci.is_in<volatile signed int>(), "");
-    static_assert(rrci.is_in<const volatile signed int>(), "");
-    static_assert(rrci.is_in<signed int&>(), "");
-    static_assert(rrci.is_in<const signed int&>(), "");
-    static_assert(rrci.is_in<volatile signed int&>(), "");
-    static_assert(rrci.is_in<const volatile signed int&>(), "");
-    static_assert(rrci.is_in<signed int&&>(), "");
-    static_assert(rrci.is_in<const signed int&&>(), "");
-    static_assert(rrci.is_in<volatile signed int&&>(), "");
-    static_assert(rrci.is_in<const volatile signed int&&>(), "");
-    static_assert(rrvi.is_in<int>(), "");
-    static_assert(rrvi.is_in<const int>(), "");
-    static_assert(rrvi.is_in<volatile int>(), "");
-    static_assert(rrvi.is_in<const volatile int>(), "");
-    static_assert(rrvi.is_in<int&>(), "");
-    static_assert(rrvi.is_in<const int&>(), "");
-    static_assert(rrvi.is_in<volatile int&>(), "");
-    static_assert(rrvi.is_in<const volatile int&>(), "");
-    static_assert(rrvi.is_in<int&&>(), "");
-    static_assert(rrvi.is_in<const int&&>(), "");
-    static_assert(rrvi.is_in<volatile int&&>(), "");
-    static_assert(rrvi.is_in<const volatile int&&>(), "");
-    static_assert(rrvi.is_in<signed int>(), "");
-    static_assert(rrvi.is_in<const signed int>(), "");
-    static_assert(rrvi.is_in<volatile signed int>(), "");
-    static_assert(rrvi.is_in<const volatile signed int>(), "");
-    static_assert(rrvi.is_in<signed int&>(), "");
-    static_assert(rrvi.is_in<const signed int&>(), "");
-    static_assert(rrvi.is_in<volatile signed int&>(), "");
-    static_assert(rrvi.is_in<const volatile signed int&>(), "");
-    static_assert(rrvi.is_in<signed int&&>(), "");
-    static_assert(rrvi.is_in<const signed int&&>(), "");
-    static_assert(rrvi.is_in<volatile signed int&&>(), "");
-    static_assert(rrvi.is_in<const volatile signed int&&>(), "");
-    static_assert(rrcvi.is_in<int>(), "");
-    static_assert(rrcvi.is_in<const int>(), "");
-    static_assert(rrcvi.is_in<volatile int>(), "");
-    static_assert(rrcvi.is_in<const volatile int>(), "");
-    static_assert(rrcvi.is_in<int&>(), "");
-    static_assert(rrcvi.is_in<const int&>(), "");
-    static_assert(rrcvi.is_in<volatile int&>(), "");
-    static_assert(rrcvi.is_in<const volatile int&>(), "");
-    static_assert(rrcvi.is_in<int&&>(), "");
-    static_assert(rrcvi.is_in<const int&&>(), "");
-    static_assert(rrcvi.is_in<volatile int&&>(), "");
-    static_assert(rrcvi.is_in<const volatile int&&>(), "");
-    static_assert(rrcvi.is_in<signed int>(), "");
-    static_assert(rrcvi.is_in<const signed int>(), "");
-    static_assert(rrcvi.is_in<volatile signed int>(), "");
-    static_assert(rrcvi.is_in<const volatile signed int>(), "");
-    static_assert(rrcvi.is_in<signed int&>(), "");
-    static_assert(rrcvi.is_in<const signed int&>(), "");
-    static_assert(rrcvi.is_in<volatile signed int&>(), "");
-    static_assert(rrcvi.is_in<const volatile signed int&>(), "");
-    static_assert(rrcvi.is_in<signed int&&>(), "");
-    static_assert(rrcvi.is_in<const signed int&&>(), "");
-    static_assert(rrcvi.is_in<volatile signed int&&>(), "");
-    static_assert(rrcvi.is_in<const volatile signed int&&>(), "");
+    static_assert(i.is_in_setof<int>(), "");
+    static_assert(i.is_in_setof<const int>(), "");
+    static_assert(i.is_in_setof<volatile int>(), "");
+    static_assert(i.is_in_setof<const volatile int>(), "");
+    static_assert(i.is_in_setof<int&>(), "");
+    static_assert(i.is_in_setof<const int&>(), "");
+    static_assert(i.is_in_setof<volatile int&>(), "");
+    static_assert(i.is_in_setof<const volatile int&>(), "");
+    static_assert(i.is_in_setof<int&&>(), "");
+    static_assert(i.is_in_setof<const int&&>(), "");
+    static_assert(i.is_in_setof<volatile int&&>(), "");
+    static_assert(i.is_in_setof<const volatile int&&>(), "");
+    static_assert(i.is_in_setof<signed int>(), "");
+    static_assert(i.is_in_setof<const signed int>(), "");
+    static_assert(i.is_in_setof<volatile signed int>(), "");
+    static_assert(i.is_in_setof<const volatile signed int>(), "");
+    static_assert(i.is_in_setof<signed int&>(), "");
+    static_assert(i.is_in_setof<const signed int&>(), "");
+    static_assert(i.is_in_setof<volatile signed int&>(), "");
+    static_assert(i.is_in_setof<const volatile signed int&>(), "");
+    static_assert(i.is_in_setof<signed int&&>(), "");
+    static_assert(i.is_in_setof<const signed int&&>(), "");
+    static_assert(i.is_in_setof<volatile signed int&&>(), "");
+    static_assert(i.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(ci.is_in_setof<int>(), "");
+    static_assert(ci.is_in_setof<const int>(), "");
+    static_assert(ci.is_in_setof<volatile int>(), "");
+    static_assert(ci.is_in_setof<const volatile int>(), "");
+    static_assert(ci.is_in_setof<int&>(), "");
+    static_assert(ci.is_in_setof<const int&>(), "");
+    static_assert(ci.is_in_setof<volatile int&>(), "");
+    static_assert(ci.is_in_setof<const volatile int&>(), "");
+    static_assert(ci.is_in_setof<int&&>(), "");
+    static_assert(ci.is_in_setof<const int&&>(), "");
+    static_assert(ci.is_in_setof<volatile int&&>(), "");
+    static_assert(ci.is_in_setof<const volatile int&&>(), "");
+    static_assert(ci.is_in_setof<signed int>(), "");
+    static_assert(ci.is_in_setof<const signed int>(), "");
+    static_assert(ci.is_in_setof<volatile signed int>(), "");
+    static_assert(ci.is_in_setof<const volatile signed int>(), "");
+    static_assert(ci.is_in_setof<signed int&>(), "");
+    static_assert(ci.is_in_setof<const signed int&>(), "");
+    static_assert(ci.is_in_setof<volatile signed int&>(), "");
+    static_assert(ci.is_in_setof<const volatile signed int&>(), "");
+    static_assert(ci.is_in_setof<signed int&&>(), "");
+    static_assert(ci.is_in_setof<const signed int&&>(), "");
+    static_assert(ci.is_in_setof<volatile signed int&&>(), "");
+    static_assert(ci.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(vi.is_in_setof<int>(), "");
+    static_assert(vi.is_in_setof<const int>(), "");
+    static_assert(vi.is_in_setof<volatile int>(), "");
+    static_assert(vi.is_in_setof<const volatile int>(), "");
+    static_assert(vi.is_in_setof<int&>(), "");
+    static_assert(vi.is_in_setof<const int&>(), "");
+    static_assert(vi.is_in_setof<volatile int&>(), "");
+    static_assert(vi.is_in_setof<const volatile int&>(), "");
+    static_assert(vi.is_in_setof<int&&>(), "");
+    static_assert(vi.is_in_setof<const int&&>(), "");
+    static_assert(vi.is_in_setof<volatile int&&>(), "");
+    static_assert(vi.is_in_setof<const volatile int&&>(), "");
+    static_assert(vi.is_in_setof<signed int>(), "");
+    static_assert(vi.is_in_setof<const signed int>(), "");
+    static_assert(vi.is_in_setof<volatile signed int>(), "");
+    static_assert(vi.is_in_setof<const volatile signed int>(), "");
+    static_assert(vi.is_in_setof<signed int&>(), "");
+    static_assert(vi.is_in_setof<const signed int&>(), "");
+    static_assert(vi.is_in_setof<volatile signed int&>(), "");
+    static_assert(vi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(vi.is_in_setof<signed int&&>(), "");
+    static_assert(vi.is_in_setof<const signed int&&>(), "");
+    static_assert(vi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(vi.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(cvi.is_in_setof<int>(), "");
+    static_assert(cvi.is_in_setof<const int>(), "");
+    static_assert(cvi.is_in_setof<volatile int>(), "");
+    static_assert(cvi.is_in_setof<const volatile int>(), "");
+    static_assert(cvi.is_in_setof<int&>(), "");
+    static_assert(cvi.is_in_setof<const int&>(), "");
+    static_assert(cvi.is_in_setof<volatile int&>(), "");
+    static_assert(cvi.is_in_setof<const volatile int&>(), "");
+    static_assert(cvi.is_in_setof<int&&>(), "");
+    static_assert(cvi.is_in_setof<const int&&>(), "");
+    static_assert(cvi.is_in_setof<volatile int&&>(), "");
+    static_assert(cvi.is_in_setof<const volatile int&&>(), "");
+    static_assert(cvi.is_in_setof<signed int>(), "");
+    static_assert(cvi.is_in_setof<const signed int>(), "");
+    static_assert(cvi.is_in_setof<volatile signed int>(), "");
+    static_assert(cvi.is_in_setof<const volatile signed int>(), "");
+    static_assert(cvi.is_in_setof<signed int&>(), "");
+    static_assert(cvi.is_in_setof<const signed int&>(), "");
+    static_assert(cvi.is_in_setof<volatile signed int&>(), "");
+    static_assert(cvi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(cvi.is_in_setof<signed int&&>(), "");
+    static_assert(cvi.is_in_setof<const signed int&&>(), "");
+    static_assert(cvi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(cvi.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(ri.is_in_setof<int>(), "");
+    static_assert(ri.is_in_setof<const int>(), "");
+    static_assert(ri.is_in_setof<volatile int>(), "");
+    static_assert(ri.is_in_setof<const volatile int>(), "");
+    static_assert(ri.is_in_setof<int&>(), "");
+    static_assert(ri.is_in_setof<const int&>(), "");
+    static_assert(ri.is_in_setof<volatile int&>(), "");
+    static_assert(ri.is_in_setof<const volatile int&>(), "");
+    static_assert(ri.is_in_setof<int&&>(), "");
+    static_assert(ri.is_in_setof<const int&&>(), "");
+    static_assert(ri.is_in_setof<volatile int&&>(), "");
+    static_assert(ri.is_in_setof<const volatile int&&>(), "");
+    static_assert(ri.is_in_setof<signed int>(), "");
+    static_assert(ri.is_in_setof<const signed int>(), "");
+    static_assert(ri.is_in_setof<volatile signed int>(), "");
+    static_assert(ri.is_in_setof<const volatile signed int>(), "");
+    static_assert(ri.is_in_setof<signed int&>(), "");
+    static_assert(ri.is_in_setof<const signed int&>(), "");
+    static_assert(ri.is_in_setof<volatile signed int&>(), "");
+    static_assert(ri.is_in_setof<const volatile signed int&>(), "");
+    static_assert(ri.is_in_setof<signed int&&>(), "");
+    static_assert(ri.is_in_setof<const signed int&&>(), "");
+    static_assert(ri.is_in_setof<volatile signed int&&>(), "");
+    static_assert(ri.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rci.is_in_setof<int>(), "");
+    static_assert(rci.is_in_setof<const int>(), "");
+    static_assert(rci.is_in_setof<volatile int>(), "");
+    static_assert(rci.is_in_setof<const volatile int>(), "");
+    static_assert(rci.is_in_setof<int&>(), "");
+    static_assert(rci.is_in_setof<const int&>(), "");
+    static_assert(rci.is_in_setof<volatile int&>(), "");
+    static_assert(rci.is_in_setof<const volatile int&>(), "");
+    static_assert(rci.is_in_setof<int&&>(), "");
+    static_assert(rci.is_in_setof<const int&&>(), "");
+    static_assert(rci.is_in_setof<volatile int&&>(), "");
+    static_assert(rci.is_in_setof<const volatile int&&>(), "");
+    static_assert(rci.is_in_setof<signed int>(), "");
+    static_assert(rci.is_in_setof<const signed int>(), "");
+    static_assert(rci.is_in_setof<volatile signed int>(), "");
+    static_assert(rci.is_in_setof<const volatile signed int>(), "");
+    static_assert(rci.is_in_setof<signed int&>(), "");
+    static_assert(rci.is_in_setof<const signed int&>(), "");
+    static_assert(rci.is_in_setof<volatile signed int&>(), "");
+    static_assert(rci.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rci.is_in_setof<signed int&&>(), "");
+    static_assert(rci.is_in_setof<const signed int&&>(), "");
+    static_assert(rci.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rci.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rvi.is_in_setof<int>(), "");
+    static_assert(rvi.is_in_setof<const int>(), "");
+    static_assert(rvi.is_in_setof<volatile int>(), "");
+    static_assert(rvi.is_in_setof<const volatile int>(), "");
+    static_assert(rvi.is_in_setof<int&>(), "");
+    static_assert(rvi.is_in_setof<const int&>(), "");
+    static_assert(rvi.is_in_setof<volatile int&>(), "");
+    static_assert(rvi.is_in_setof<const volatile int&>(), "");
+    static_assert(rvi.is_in_setof<int&&>(), "");
+    static_assert(rvi.is_in_setof<const int&&>(), "");
+    static_assert(rvi.is_in_setof<volatile int&&>(), "");
+    static_assert(rvi.is_in_setof<const volatile int&&>(), "");
+    static_assert(rvi.is_in_setof<signed int>(), "");
+    static_assert(rvi.is_in_setof<const signed int>(), "");
+    static_assert(rvi.is_in_setof<volatile signed int>(), "");
+    static_assert(rvi.is_in_setof<const volatile signed int>(), "");
+    static_assert(rvi.is_in_setof<signed int&>(), "");
+    static_assert(rvi.is_in_setof<const signed int&>(), "");
+    static_assert(rvi.is_in_setof<volatile signed int&>(), "");
+    static_assert(rvi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rvi.is_in_setof<signed int&&>(), "");
+    static_assert(rvi.is_in_setof<const signed int&&>(), "");
+    static_assert(rvi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rvi.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rcvi.is_in_setof<int>(), "");
+    static_assert(rcvi.is_in_setof<const int>(), "");
+    static_assert(rcvi.is_in_setof<volatile int>(), "");
+    static_assert(rcvi.is_in_setof<const volatile int>(), "");
+    static_assert(rcvi.is_in_setof<int&>(), "");
+    static_assert(rcvi.is_in_setof<const int&>(), "");
+    static_assert(rcvi.is_in_setof<volatile int&>(), "");
+    static_assert(rcvi.is_in_setof<const volatile int&>(), "");
+    static_assert(rcvi.is_in_setof<int&&>(), "");
+    static_assert(rcvi.is_in_setof<const int&&>(), "");
+    static_assert(rcvi.is_in_setof<volatile int&&>(), "");
+    static_assert(rcvi.is_in_setof<const volatile int&&>(), "");
+    static_assert(rcvi.is_in_setof<signed int>(), "");
+    static_assert(rcvi.is_in_setof<const signed int>(), "");
+    static_assert(rcvi.is_in_setof<volatile signed int>(), "");
+    static_assert(rcvi.is_in_setof<const volatile signed int>(), "");
+    static_assert(rcvi.is_in_setof<signed int&>(), "");
+    static_assert(rcvi.is_in_setof<const signed int&>(), "");
+    static_assert(rcvi.is_in_setof<volatile signed int&>(), "");
+    static_assert(rcvi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rcvi.is_in_setof<signed int&&>(), "");
+    static_assert(rcvi.is_in_setof<const signed int&&>(), "");
+    static_assert(rcvi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rcvi.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rri.is_in_setof<int>(), "");
+    static_assert(rri.is_in_setof<const int>(), "");
+    static_assert(rri.is_in_setof<volatile int>(), "");
+    static_assert(rri.is_in_setof<const volatile int>(), "");
+    static_assert(rri.is_in_setof<int&>(), "");
+    static_assert(rri.is_in_setof<const int&>(), "");
+    static_assert(rri.is_in_setof<volatile int&>(), "");
+    static_assert(rri.is_in_setof<const volatile int&>(), "");
+    static_assert(rri.is_in_setof<int&&>(), "");
+    static_assert(rri.is_in_setof<const int&&>(), "");
+    static_assert(rri.is_in_setof<volatile int&&>(), "");
+    static_assert(rri.is_in_setof<const volatile int&&>(), "");
+    static_assert(rri.is_in_setof<signed int>(), "");
+    static_assert(rri.is_in_setof<const signed int>(), "");
+    static_assert(rri.is_in_setof<volatile signed int>(), "");
+    static_assert(rri.is_in_setof<const volatile signed int>(), "");
+    static_assert(rri.is_in_setof<signed int&>(), "");
+    static_assert(rri.is_in_setof<const signed int&>(), "");
+    static_assert(rri.is_in_setof<volatile signed int&>(), "");
+    static_assert(rri.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rri.is_in_setof<signed int&&>(), "");
+    static_assert(rri.is_in_setof<const signed int&&>(), "");
+    static_assert(rri.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rri.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rrci.is_in_setof<int>(), "");
+    static_assert(rrci.is_in_setof<const int>(), "");
+    static_assert(rrci.is_in_setof<volatile int>(), "");
+    static_assert(rrci.is_in_setof<const volatile int>(), "");
+    static_assert(rrci.is_in_setof<int&>(), "");
+    static_assert(rrci.is_in_setof<const int&>(), "");
+    static_assert(rrci.is_in_setof<volatile int&>(), "");
+    static_assert(rrci.is_in_setof<const volatile int&>(), "");
+    static_assert(rrci.is_in_setof<int&&>(), "");
+    static_assert(rrci.is_in_setof<const int&&>(), "");
+    static_assert(rrci.is_in_setof<volatile int&&>(), "");
+    static_assert(rrci.is_in_setof<const volatile int&&>(), "");
+    static_assert(rrci.is_in_setof<signed int>(), "");
+    static_assert(rrci.is_in_setof<const signed int>(), "");
+    static_assert(rrci.is_in_setof<volatile signed int>(), "");
+    static_assert(rrci.is_in_setof<const volatile signed int>(), "");
+    static_assert(rrci.is_in_setof<signed int&>(), "");
+    static_assert(rrci.is_in_setof<const signed int&>(), "");
+    static_assert(rrci.is_in_setof<volatile signed int&>(), "");
+    static_assert(rrci.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rrci.is_in_setof<signed int&&>(), "");
+    static_assert(rrci.is_in_setof<const signed int&&>(), "");
+    static_assert(rrci.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rrci.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rrvi.is_in_setof<int>(), "");
+    static_assert(rrvi.is_in_setof<const int>(), "");
+    static_assert(rrvi.is_in_setof<volatile int>(), "");
+    static_assert(rrvi.is_in_setof<const volatile int>(), "");
+    static_assert(rrvi.is_in_setof<int&>(), "");
+    static_assert(rrvi.is_in_setof<const int&>(), "");
+    static_assert(rrvi.is_in_setof<volatile int&>(), "");
+    static_assert(rrvi.is_in_setof<const volatile int&>(), "");
+    static_assert(rrvi.is_in_setof<int&&>(), "");
+    static_assert(rrvi.is_in_setof<const int&&>(), "");
+    static_assert(rrvi.is_in_setof<volatile int&&>(), "");
+    static_assert(rrvi.is_in_setof<const volatile int&&>(), "");
+    static_assert(rrvi.is_in_setof<signed int>(), "");
+    static_assert(rrvi.is_in_setof<const signed int>(), "");
+    static_assert(rrvi.is_in_setof<volatile signed int>(), "");
+    static_assert(rrvi.is_in_setof<const volatile signed int>(), "");
+    static_assert(rrvi.is_in_setof<signed int&>(), "");
+    static_assert(rrvi.is_in_setof<const signed int&>(), "");
+    static_assert(rrvi.is_in_setof<volatile signed int&>(), "");
+    static_assert(rrvi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rrvi.is_in_setof<signed int&&>(), "");
+    static_assert(rrvi.is_in_setof<const signed int&&>(), "");
+    static_assert(rrvi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rrvi.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rrcvi.is_in_setof<int>(), "");
+    static_assert(rrcvi.is_in_setof<const int>(), "");
+    static_assert(rrcvi.is_in_setof<volatile int>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile int>(), "");
+    static_assert(rrcvi.is_in_setof<int&>(), "");
+    static_assert(rrcvi.is_in_setof<const int&>(), "");
+    static_assert(rrcvi.is_in_setof<volatile int&>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile int&>(), "");
+    static_assert(rrcvi.is_in_setof<int&&>(), "");
+    static_assert(rrcvi.is_in_setof<const int&&>(), "");
+    static_assert(rrcvi.is_in_setof<volatile int&&>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile int&&>(), "");
+    static_assert(rrcvi.is_in_setof<signed int>(), "");
+    static_assert(rrcvi.is_in_setof<const signed int>(), "");
+    static_assert(rrcvi.is_in_setof<volatile signed int>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile signed int>(), "");
+    static_assert(rrcvi.is_in_setof<signed int&>(), "");
+    static_assert(rrcvi.is_in_setof<const signed int&>(), "");
+    static_assert(rrcvi.is_in_setof<volatile signed int&>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rrcvi.is_in_setof<signed int&&>(), "");
+    static_assert(rrcvi.is_in_setof<const signed int&&>(), "");
+    static_assert(rrcvi.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rrcvi.is_in_setof<const volatile signed int&&>(), "");
 
-    static_assert(not i.is_in<long>(), "");
-    static_assert(not ci.is_in<long>(), "");
-    static_assert(not i.is_in<unsigned int>(), "");
-    static_assert(not rci.is_in<unsigned int>(), "");
+    static_assert(not i.is_in_setof<long>(), "");
+    static_assert(not ci.is_in_setof<long>(), "");
+    static_assert(not i.is_in_setof<unsigned int>(), "");
+    static_assert(not rci.is_in_setof<unsigned int>(), "");
     struct Foo;
-    static_assert(not i.is_in<Foo>(), "");
-    static_assert(not rrvi.is_in<Foo>(), "");
+    static_assert(not i.is_in_setof<Foo>(), "");
+    static_assert(not rrvi.is_in_setof<Foo>(), "");
 
+    // all of these are the same set<int, long>, except for ..
     constexpr auto rci_rrl = type_set<const int&, long&&>();
     constexpr auto i_cl = type_set<int, const long>();
     constexpr auto i_rrl = type_set<int, long&&>();
     constexpr auto i_rsl = type_set<int, signed long&>();
     constexpr auto ri_rrcsl = type_set<int&, const signed long&&>();
     constexpr auto rri_rrsl = type_set<int&&, signed long&&>();
+    // ... the one here, which is set<int, unsigned long>
     constexpr auto rri_rrul = type_set<int&&, unsigned long&&>();
 
     static_assert(decltype(rci_rrl)::is_same<decltype(i_cl)>(), "");
@@ -501,120 +660,99 @@ TEST(type_set, test_type_set__size__empty__is_in__is_same)
     static_assert(rri_rrsl.size() == 2, "");
     static_assert(rri_rrul.size() == 2, "");
 
-    static_assert(rci_rrl.is_in<int>(), "");
-    static_assert(rci_rrl.is_in<const int>(), "");
-    static_assert(rci_rrl.is_in<volatile int>(), "");
-    static_assert(rci_rrl.is_in<const volatile int>(), "");
-    static_assert(rci_rrl.is_in<int&>(), "");
-    static_assert(rci_rrl.is_in<const int&>(), "");
-    static_assert(rci_rrl.is_in<volatile int&>(), "");
-    static_assert(rci_rrl.is_in<const volatile int&>(), "");
-    static_assert(rci_rrl.is_in<int&&>(), "");
-    static_assert(rci_rrl.is_in<const int&&>(), "");
-    static_assert(rci_rrl.is_in<volatile int&&>(), "");
-    static_assert(rci_rrl.is_in<const volatile int&&>(), "");
-    static_assert(rci_rrl.is_in<signed int>(), "");
-    static_assert(rci_rrl.is_in<const signed int>(), "");
-    static_assert(rci_rrl.is_in<volatile signed int>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed int>(), "");
-    static_assert(rci_rrl.is_in<signed int&>(), "");
-    static_assert(rci_rrl.is_in<const signed int&>(), "");
-    static_assert(rci_rrl.is_in<volatile signed int&>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed int&>(), "");
-    static_assert(rci_rrl.is_in<signed int&&>(), "");
-    static_assert(rci_rrl.is_in<const signed int&&>(), "");
-    static_assert(rci_rrl.is_in<volatile signed int&&>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed int&&>(), "");
-    static_assert(rci_rrl.is_in<long>(), "");
-    static_assert(rci_rrl.is_in<const long>(), "");
-    static_assert(rci_rrl.is_in<volatile long>(), "");
-    static_assert(rci_rrl.is_in<const volatile long>(), "");
-    static_assert(rci_rrl.is_in<long&>(), "");
-    static_assert(rci_rrl.is_in<const long&>(), "");
-    static_assert(rci_rrl.is_in<volatile long&>(), "");
-    static_assert(rci_rrl.is_in<const volatile long&>(), "");
-    static_assert(rci_rrl.is_in<long&&>(), "");
-    static_assert(rci_rrl.is_in<const long&&>(), "");
-    static_assert(rci_rrl.is_in<volatile long&&>(), "");
-    static_assert(rci_rrl.is_in<const volatile long&&>(), "");
-    static_assert(rci_rrl.is_in<signed long>(), "");
-    static_assert(rci_rrl.is_in<const signed long>(), "");
-    static_assert(rci_rrl.is_in<volatile signed long>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed long>(), "");
-    static_assert(rci_rrl.is_in<signed long&>(), "");
-    static_assert(rci_rrl.is_in<const signed long&>(), "");
-    static_assert(rci_rrl.is_in<volatile signed long&>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed long&>(), "");
-    static_assert(rci_rrl.is_in<signed long&&>(), "");
-    static_assert(rci_rrl.is_in<const signed long&&>(), "");
-    static_assert(rci_rrl.is_in<volatile signed long&&>(), "");
-    static_assert(rci_rrl.is_in<const volatile signed long&&>(), "");
-    static_assert(i_cl.is_in<long>(), "");
-    static_assert(i_cl.is_in<const long>(), "");
-    static_assert(i_cl.is_in<volatile long>(), "");
-    static_assert(i_cl.is_in<const volatile long>(), "");
-    static_assert(i_cl.is_in<long&>(), "");
-    static_assert(i_cl.is_in<const long&>(), "");
-    static_assert(i_cl.is_in<volatile long&>(), "");
-    static_assert(i_cl.is_in<const volatile long&>(), "");
-    static_assert(i_cl.is_in<long&&>(), "");
-    static_assert(i_cl.is_in<const long&&>(), "");
-    static_assert(i_cl.is_in<volatile long&&>(), "");
-    static_assert(i_cl.is_in<const volatile long&&>(), "");
-    static_assert(i_cl.is_in<signed long>(), "");
-    static_assert(i_cl.is_in<const signed long>(), "");
-    static_assert(i_cl.is_in<volatile signed long>(), "");
-    static_assert(i_cl.is_in<const volatile signed long>(), "");
-    static_assert(i_cl.is_in<signed long&>(), "");
-    static_assert(i_cl.is_in<const signed long&>(), "");
-    static_assert(i_cl.is_in<volatile signed long&>(), "");
-    static_assert(i_cl.is_in<const volatile signed long&>(), "");
-    static_assert(i_cl.is_in<signed long&&>(), "");
-    static_assert(i_cl.is_in<const signed long&&>(), "");
-    static_assert(i_cl.is_in<volatile signed long&&>(), "");
-    static_assert(i_cl.is_in<const volatile signed long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<int>(), "");
+    static_assert(rci_rrl.is_in_setof<const int>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile int>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile int>(), "");
+    static_assert(rci_rrl.is_in_setof<int&>(), "");
+    static_assert(rci_rrl.is_in_setof<const int&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile int&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile int&>(), "");
+    static_assert(rci_rrl.is_in_setof<int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<signed int>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed int>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed int>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed int>(), "");
+    static_assert(rci_rrl.is_in_setof<signed int&>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed int&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed int&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed int&>(), "");
+    static_assert(rci_rrl.is_in_setof<signed int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed int&&>(), "");
+    static_assert(rci_rrl.is_in_setof<long>(), "");
+    static_assert(rci_rrl.is_in_setof<const long>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile long>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile long>(), "");
+    static_assert(rci_rrl.is_in_setof<long&>(), "");
+    static_assert(rci_rrl.is_in_setof<const long&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile long&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile long&>(), "");
+    static_assert(rci_rrl.is_in_setof<long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<signed long>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed long>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed long>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed long>(), "");
+    static_assert(rci_rrl.is_in_setof<signed long&>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed long&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed long&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed long&>(), "");
+    static_assert(rci_rrl.is_in_setof<signed long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const signed long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<volatile signed long&&>(), "");
+    static_assert(rci_rrl.is_in_setof<const volatile signed long&&>(), "");
+    static_assert(i_cl.is_in_setof<long>(), "");
+    static_assert(i_cl.is_in_setof<const long>(), "");
+    static_assert(i_cl.is_in_setof<volatile long>(), "");
+    static_assert(i_cl.is_in_setof<const volatile long>(), "");
+    static_assert(i_cl.is_in_setof<long&>(), "");
+    static_assert(i_cl.is_in_setof<const long&>(), "");
+    static_assert(i_cl.is_in_setof<volatile long&>(), "");
+    static_assert(i_cl.is_in_setof<const volatile long&>(), "");
+    static_assert(i_cl.is_in_setof<long&&>(), "");
+    static_assert(i_cl.is_in_setof<const long&&>(), "");
+    static_assert(i_cl.is_in_setof<volatile long&&>(), "");
+    static_assert(i_cl.is_in_setof<const volatile long&&>(), "");
+    static_assert(i_cl.is_in_setof<signed long>(), "");
+    static_assert(i_cl.is_in_setof<const signed long>(), "");
+    static_assert(i_cl.is_in_setof<volatile signed long>(), "");
+    static_assert(i_cl.is_in_setof<const volatile signed long>(), "");
+    static_assert(i_cl.is_in_setof<signed long&>(), "");
+    static_assert(i_cl.is_in_setof<const signed long&>(), "");
+    static_assert(i_cl.is_in_setof<volatile signed long&>(), "");
+    static_assert(i_cl.is_in_setof<const volatile signed long&>(), "");
+    static_assert(i_cl.is_in_setof<signed long&&>(), "");
+    static_assert(i_cl.is_in_setof<const signed long&&>(), "");
+    static_assert(i_cl.is_in_setof<volatile signed long&&>(), "");
+    static_assert(i_cl.is_in_setof<const volatile signed long&&>(), "");
 
-    static_assert(not rci_rrl.is_in<unsigned int>(), "");
-    static_assert(not rci_rrl.is_in<Foo>(), "");
+    static_assert(not rci_rrl.is_in_setof<unsigned int>(), "");
+    static_assert(not rci_rrl.is_in_setof<Foo>(), "");
 
-    static_assert(rri_rrul.is_in<int>(), "");
-    static_assert(rri_rrul.is_in<int&&>(), "");
-    static_assert(rri_rrul.is_in<const int>(), "");
-    static_assert(rri_rrul.is_in<unsigned long>(), "");
-    static_assert(rri_rrul.is_in<const unsigned long>(), "");
-    static_assert(rri_rrul.is_in<volatile unsigned long>(), "");
-    static_assert(rri_rrul.is_in<const volatile unsigned long>(), "");
-    static_assert(rri_rrul.is_in<unsigned long&>(), "");
-    static_assert(rri_rrul.is_in<const unsigned long&>(), "");
-    static_assert(rri_rrul.is_in<volatile unsigned long&>(), "");
-    static_assert(rri_rrul.is_in<const volatile unsigned long&>(), "");
-    static_assert(rri_rrul.is_in<unsigned long&&>(), "");
-    static_assert(rri_rrul.is_in<const unsigned long&&>(), "");
-    static_assert(rri_rrul.is_in<volatile unsigned long&&>(), "");
-    static_assert(rri_rrul.is_in<const volatile unsigned long&&>(), "");
+    static_assert(rri_rrul.is_in_setof<int>(), "");
+    static_assert(rri_rrul.is_in_setof<int&&>(), "");
+    static_assert(rri_rrul.is_in_setof<const int>(), "");
+    static_assert(rri_rrul.is_in_setof<unsigned long>(), "");
+    static_assert(rri_rrul.is_in_setof<const unsigned long>(), "");
+    static_assert(rri_rrul.is_in_setof<volatile unsigned long>(), "");
+    static_assert(rri_rrul.is_in_setof<const volatile unsigned long>(), "");
+    static_assert(rri_rrul.is_in_setof<unsigned long&>(), "");
+    static_assert(rri_rrul.is_in_setof<const unsigned long&>(), "");
+    static_assert(rri_rrul.is_in_setof<volatile unsigned long&>(), "");
+    static_assert(rri_rrul.is_in_setof<const volatile unsigned long&>(), "");
+    static_assert(rri_rrul.is_in_setof<unsigned long&&>(), "");
+    static_assert(rri_rrul.is_in_setof<const unsigned long&&>(), "");
+    static_assert(rri_rrul.is_in_setof<volatile unsigned long&&>(), "");
+    static_assert(rri_rrul.is_in_setof<const volatile unsigned long&&>(), "");
 
-    static_assert(not rri_rrul.is_in<unsigned int>(), "");
-    static_assert(not rri_rrul.is_in<signed long>(), "");
-    static_assert(not rri_rrul.is_in<const Foo&>(), "");
-}
-
-TEST(type_set, test_type_set__join)
-{
-    using namespace juno;
-
-    static_assert(type_set<int, long, unsigned long>::is_same<
-            decltype(type_set<int, long>::join<unsigned long>())
-            >(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<long>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<int>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<void>())>(), "");
-
-    static_assert(type_set<void>::is_same<decltype(type_set<>::join<type_set<>>())>(), "");
-    static_assert(type_set<>::is_same<decltype(type_set<>::join<type_set<void>>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<>::join<type_set<const int, long&&>>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int>::join<type_set<int, long>>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<type_set<int, long>>())>(), "");
-    static_assert(type_set<int, long>::is_same<decltype(type_set<int, long&&>::join<type_set<const int&>>())>(), "");
-
-    SUCCEED();
+    static_assert(not rri_rrul.is_in_setof<unsigned int>(), "");
+    static_assert(not rri_rrul.is_in_setof<signed long>(), "");
+    static_assert(not rri_rrul.is_in_setof<const Foo&>(), "");
 }
