@@ -31,6 +31,17 @@ namespace juno {
         using result = typename and_<L...>::result;
     };
 
+    template<typename ...L> struct or_;
+    template<typename ...L> struct or_<true_, L...> {
+        using result = true_;
+    };
+    template<> struct or_<false_> {
+        using result = false_;
+    };
+    template<typename ...L> struct or_<false_, L...> {
+        using result = typename or_<L...>::result;
+    };
+
     template<typename T> struct to_bool;
     template<> struct to_bool<false_> {
         constexpr static bool value = false;

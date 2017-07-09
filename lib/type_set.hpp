@@ -47,6 +47,18 @@ namespace juno {
             using result = true_;
         };
 
+        template <typename ...L> struct is_any_set;
+        template <typename ...P, typename ...L> struct is_any_set<set<P...>, set<L...>> {
+            using set_ = set<P...>;
+            using result = typename or_<
+                    typename is_in<typename set_::head, L...>::result
+                    , typename is_any_set<typename set_::tail, set<L...>>::result
+            >::result;
+        };
+        template <typename ...L> struct is_any_set<set<>, set<L...>> {
+            using result = false_;
+        };
+
         template <typename ...L> struct join_set;
         template <typename ...P, typename ...L> struct join_set<set<P...>, set<L...>> {
             using result = typename set<P..., L...>::unique;
@@ -62,6 +74,11 @@ namespace juno {
             template <typename U>
             inline constexpr static bool is_in() {
                 return to_bool<typename is_in_set<U, unique>::result>::value;
+            }
+
+            template <typename U>
+            inline constexpr static bool is_any() {
+                return false;
             }
 
             template <typename U>
@@ -103,6 +120,11 @@ namespace juno {
             template <typename U>
             inline constexpr static bool is_in() {
                 return to_bool<typename is_in_set<U, unique>::result>::value;
+            }
+
+            template <typename U>
+            inline constexpr static bool is_any() {
+                return to_bool<typename is_any_set<U, unique>::result>::value;
             }
 
             template <typename U>
@@ -162,6 +184,18 @@ namespace juno {
         template <typename ...P>
         inline constexpr static bool is_in_setof() {
             return set_::template is_in<typename d::set<
+                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
+            >::unique>();
+        }
+
+        template <typename T>
+        inline constexpr static bool is_any() {
+            return set_::template is_any<typename T::set_>();
+        }
+
+        template <typename ...P>
+        inline constexpr static bool is_any_setof() {
+            return set_::template is_any<typename d::set<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
             >::unique>();
         }

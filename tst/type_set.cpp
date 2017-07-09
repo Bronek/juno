@@ -57,6 +57,20 @@ TEST(type_set, type_set__basic)
     static_assert(type_set<int, Baz>::is_in_setof<>(), "");
     static_assert(type_set<int>::is_in_setof<void>(), "");
 
+    // for "is_any" operation, we are looking for a non-empty intersection of two sets
+    static_assert(not type_set<>::is_any<type_set<>>(), "");
+    static_assert(not type_set<void>::is_any_setof<>(), "");
+    static_assert(not type_set<>::is_any_setof<int, long>(), "");
+    static_assert(not type_set<int, long>::is_any_setof<>(), "");
+    static_assert(not type_set<int, long>::is_any_setof<Foo, Bar>(), "");
+    static_assert(type_set<int, long>::is_any_setof<Foo, Bar, long>(), "");
+    static_assert(type_set<Fuz, long>::is_any_setof<Fuz, Bar, int>(), "");
+    static_assert(type_set<Fuz, long, Bar>::is_any_setof<Bar>(), "");
+    static_assert(not type_set<Fuz, long>::is_any<type_set<int, Foo, Bar>>(), "");
+    static_assert(not type_set<Fuz, long>::is_any<type_set<void>>(), "");
+    static_assert(not type_set<Fuz, long>::is_any_setof<void, int>(), "");
+    static_assert(type_set<Fuz, long>::is_any_setof<void, long>(), "");
+
     // ordering of elements is ignored and duplicate elements are ignored
     static_assert(type_set<int, long>::is_same_setof<int, long>(), "");
     static_assert(type_set<int, long>::is_same_setof<long, int>(), "");
@@ -129,8 +143,6 @@ TEST(type_set, type_set__basic)
     static_assert(type_set<int, long>::is_same<decltype(type_set<int>::join<type_set<int, long>>())>(), "");
     static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<type_set<int, long>>())>(), "");
     static_assert(type_set<int, long>::is_same<decltype(type_set<int, long&&>::join<type_set<const int&>>())>(), "");
-
-    // counting elements in the set respects uniqueness rules
 
     SUCCEED();
 }
