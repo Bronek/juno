@@ -64,11 +64,24 @@ namespace juno {
             using result = typename set<P..., L...>::unique;
         };
 
+        template <typename ...L> struct cross_set;
+        template <typename ...L> struct cross_set<set<>, set<L...>> {
+            using result = set<>;
+        };
+        template <typename T, typename ...P, typename ...L> struct cross_set<set<T, P...>, set<L...>> {
+            using tail = typename cross_set<set<P...>, set<L...>>::result;
+            using result = typename if_<
+                    typename is_in<T, L...>::result
+                    , typename join<T, tail>::result
+                    , tail
+            >::result;
+        };
+
         template <> struct set<> {
             using unique = set<>;
             using head = void;
             using tail = set<>;
-            using myset = type_set<>;
+            using make = type_set<>;
             using empty = true_;
 
             template <typename U>
@@ -90,10 +103,14 @@ namespace juno {
             }
 
             template <typename U>
-            inline constexpr static auto join() {
-                using result = typename U::unique::myset;
-                return result();
-            }
+            struct join {
+                using result = typename U::unique;
+            };
+
+            template <typename U>
+            struct cross {
+                using result = set<>;
+            };
 
             inline constexpr static std::size_t size() { return 0; }
         };
@@ -114,7 +131,7 @@ namespace juno {
                     , typename set<L...>::tail
                     , set<L...>
             >::result;
-            using myset = type_set<T, L...>;
+            using make = type_set<T, L...>;
             using empty = false_;
 
             template <typename U>
@@ -136,13 +153,17 @@ namespace juno {
             }
 
             template <typename U>
-            inline constexpr static auto join() {
+            struct join {
                 using result = typename if_<typename d::is_in_set<U, unique>::result
                         , unique
                         , typename d::join_set<U, unique>::result
-                >::result::myset;
-                return result();
-            }
+                >::result;
+            };
+
+            template <typename U>
+            struct cross {
+                using result = typename d::cross_set<U, unique>::result;
+            };
 
             inline constexpr static std::size_t size() { return 1 + set<L...>::size(); }
         };
@@ -150,7 +171,7 @@ namespace juno {
             using unique = typename set<L...>::unique;
             using head = typename set<L...>::head;
             using tail = typename set<L...>::tail;
-            using myset = typename set<L...>::myset;
+            using make = typename set<L...>::make;
             using empty = typename set<L...>::empty;
         };
     }
@@ -202,17 +223,30 @@ namespace juno {
 
         template <typename T>
         inline constexpr static auto join() {
-            return set_::template join<typename T::set_>();
+            return typename set_::template join<typename T::set_>::result::make();
         }
 
         template <typename ...P>
         inline constexpr static auto join_setof() {
-            return set_::template join<typename d::set<
+            return typename set_::template join<typename d::set<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
-            >::unique>();
+            >::unique>::result::make();
+        }
+
+        template <typename T>
+        inline constexpr static auto cross() {
+            return typename set_::template cross<typename T::set_>::result::make();
+        }
+
+        template <typename ...P>
+        inline constexpr static auto cross_setof() {
+            return typename set_::template cross<typename d::set<
+                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
+            >::unique>::result::make();
         }
 
         inline constexpr static std::size_t size() { return set_::size(); }
         inline constexpr static bool empty() { return to_bool<typename set_::empty>::value; }
     };
+
 }

@@ -144,6 +144,20 @@ TEST(type_set, type_set__basic)
     static_assert(type_set<int, long>::is_same<decltype(type_set<int, long>::join<type_set<int, long>>())>(), "");
     static_assert(type_set<int, long>::is_same<decltype(type_set<int, long&&>::join<type_set<const int&>>())>(), "");
 
+    // intersection of sets
+    static_assert(type_set<>::is_same<decltype(type_set<>::cross<type_set<>>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::cross_setof<>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<int>::cross_setof<>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::cross_setof<int>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<int, Foo>::cross_setof<>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::cross_setof<int, Foo>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<int, Foo>::cross_setof<Bar>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<Bar>::cross_setof<int, Foo>())>(), "");
+    static_assert(type_set<Baz>::is_same<decltype(type_set<int, Foo, Baz>::cross_setof<Bar, Baz>())>(), "");
+    static_assert(type_set<Baz>::is_same<decltype(type_set<Bar, Baz>::cross_setof<int, Foo, Baz>())>(), "");
+    static_assert(type_set<Baz, Bar, int>::is_same<decltype(type_set<Baz, const Bar, int&>::cross_setof<int&&, Baz, Bar>())>(), "");
+    static_assert(type_set<Baz, Bar>::is_same<decltype(type_set<int, Baz, Foo, void, Bar>::cross_setof<void, long, Fuz, Bar, Baz>())>(), "");
+
     SUCCEED();
 }
 
