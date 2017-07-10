@@ -31,6 +31,9 @@ namespace juno {
 
         template <typename ...L> struct set;
         template <typename ...L> struct join;
+        template <typename ...L> struct join<void, set<L...>> {
+            using result = set<L...>;
+        };
         template <typename T, typename ...L> struct join<T, set<L...>> {
             using result = set<T, L...>;
         };
@@ -77,6 +80,19 @@ namespace juno {
             >::result;
         };
 
+        template <typename ...L> struct less_set;
+        template <typename ...L> struct less_set<set<>, set<L...>> {
+            using result = set<>;
+        };
+        template <typename T, typename ...P, typename ...L> struct less_set<set<T, P...>, set<L...>> {
+            using tail = typename less_set<set<P...>, set<L...>>::result;
+            using result = typename if_<
+                    typename is_in<T, L...>::result
+                    , tail
+                    , typename join<T, tail>::result
+            >::result;
+        };
+
         template <> struct set<> {
             using unique = set<>;
             using head = void;
@@ -109,6 +125,11 @@ namespace juno {
 
             template <typename U>
             struct cross {
+                using result = set<>;
+            };
+
+            template <typename U>
+            struct less {
                 using result = set<>;
             };
 
@@ -163,6 +184,11 @@ namespace juno {
             template <typename U>
             struct cross {
                 using result = typename d::cross_set<U, unique>::result;
+            };
+
+            template <typename U>
+            struct less {
+                using result = typename d::less_set<unique, U>::result;
             };
 
             inline constexpr static std::size_t size() { return 1 + set<L...>::size(); }
@@ -241,6 +267,18 @@ namespace juno {
         template <typename ...P>
         inline constexpr static auto cross_setof() {
             return typename set_::template cross<typename d::set<
+                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
+            >::unique>::result::make();
+        }
+
+        template <typename T>
+        inline constexpr static auto less() {
+            return typename set_::template less<typename T::set_>::result::make();
+        }
+
+        template <typename ...P>
+        inline constexpr static auto less_setof() {
+            return typename set_::template less<typename d::set<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...
             >::unique>::result::make();
         }

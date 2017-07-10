@@ -158,6 +158,20 @@ TEST(type_set, type_set__basic)
     static_assert(type_set<Baz, Bar, int>::is_same<decltype(type_set<Baz, const Bar, int&>::cross_setof<int&&, Baz, Bar>())>(), "");
     static_assert(type_set<Baz, Bar>::is_same<decltype(type_set<int, Baz, Foo, void, Bar>::cross_setof<void, long, Fuz, Bar, Baz>())>(), "");
 
+    // difference of sets
+    static_assert(type_set<>::is_same<decltype(type_set<>::less<type_set<>>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::less_setof<>())>(), "");
+    static_assert(type_set<int>::is_same<decltype(type_set<int>::less_setof<>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::less_setof<int>())>(), "");
+    static_assert(type_set<int, Foo>::is_same<decltype(type_set<int, Foo>::less_setof<>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<>::less_setof<int, Foo>())>(), "");
+    static_assert(type_set<int, Foo>::is_same<decltype(type_set<int, Foo>::less_setof<Bar>())>(), "");
+    static_assert(type_set<Bar>::is_same<decltype(type_set<Bar>::less_setof<int, Foo>())>(), "");
+    static_assert(type_set<int, Foo>::is_same<decltype(type_set<int, Foo, Baz>::less_setof<Bar, Baz>())>(), "");
+    static_assert(type_set<Bar>::is_same<decltype(type_set<Bar, Baz>::less_setof<int, Foo, Baz>())>(), "");
+    static_assert(type_set<>::is_same<decltype(type_set<Baz, const Bar, int&>::less_setof<int&&, Baz, Bar>())>(), "");
+    static_assert(type_set<int, Foo>::is_same<decltype(type_set<int, Baz, Foo, void, Bar>::less_setof<void, long, Fuz, Bar, Baz>())>(), "");
+
     SUCCEED();
 }
 
