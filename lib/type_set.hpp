@@ -102,7 +102,7 @@ namespace juno {
 
             template <typename U>
             inline constexpr static bool is_in() {
-                return to_bool<typename is_in_set<U, unique>::result>::value;
+                return is_in_set<U, unique>::result::value;
             }
 
             template <typename U>
@@ -112,10 +112,10 @@ namespace juno {
 
             template <typename U>
             inline constexpr static bool is_same() {
-                return to_bool<typename and_<
+                return and_<
                         typename is_in_set<U, unique>::result
                         , typename is_in_set<unique, U>::result
-                >::result>::value;
+                >::result::value;
             }
 
             template <typename U>
@@ -157,20 +157,20 @@ namespace juno {
 
             template <typename U>
             inline constexpr static bool is_in() {
-                return to_bool<typename is_in_set<U, unique>::result>::value;
+                return is_in_set<U, unique>::result::value;
             }
 
             template <typename U>
             inline constexpr static bool is_any() {
-                return to_bool<typename is_any_set<U, unique>::result>::value;
+                return is_any_set<U, unique>::result::value;
             }
 
             template <typename U>
             inline constexpr static bool is_same() {
-                return to_bool<typename and_<
+                return and_<
                         typename is_in_set<U, unique>::result
                         , typename is_in_set<unique, U>::result
-                >::result>::value;
+                >::result::value;
             }
 
             template <typename U>
@@ -284,7 +284,7 @@ namespace juno {
         }
 
         inline constexpr static std::size_t size() { return set_::size(); }
-        inline constexpr static bool empty() { return to_bool<typename set_::empty>::value; }
+        inline constexpr static bool empty() { return set_::empty::value; }
     };
 
 }

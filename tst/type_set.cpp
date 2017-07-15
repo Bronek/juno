@@ -184,38 +184,38 @@ TEST(type_set, type_set__details_unique)
     struct Foo; struct Bar;
 
     // can't find actual type in an empty list
-    static_assert(std::is_same<d::is_in<int>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Foo>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<int, void>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Foo, void, void>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Foo, void, void, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<int>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Foo>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, void>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Foo, void, void>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Foo, void, void, void>::result, std::false_type>::value, "");
 
     // can find void, i.e. no-element, in any list including empty one
-    static_assert(std::is_same<d::is_in<void>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<void, void>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<void, Foo>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<void, Foo, void, bool>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<void, Foo, Bar, int, bool>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<void>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<void, void>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo, void, bool>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<void, Foo, Bar, int, bool>::result, std::true_type>::value, "");
 
     // look for actual type where we expect to find it
-    static_assert(std::is_same<d::is_in<int, int>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, int, void>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, void, int>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, void, int, void>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, void, void, int>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, int, long, Foo>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, Foo, Bar, long, int>::result, true_>::value, "");
-    static_assert(std::is_same<d::is_in<int, Foo, void, void, int, void>::result, true_>::value, "");
+    static_assert(std::is_same<d::is_in<int, int>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, int, void>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, int>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, int, void>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, void, void, int>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, int, long, Foo>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, Foo, Bar, long, int>::result, std::true_type>::value, "");
+    static_assert(std::is_same<d::is_in<int, Foo, void, void, int, void>::result, std::true_type>::value, "");
 
     // look for actual type where we do not expect to find it
-    static_assert(std::is_same<d::is_in<Bar, int>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, int, void>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, void, int>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, void, int, void>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, void, void, int>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, int, long, Foo>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, Foo, bool, long, int>::result, false_>::value, "");
-    static_assert(std::is_same<d::is_in<Bar, Foo, void, void, int, void>::result, false_>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, int>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, int, void>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, int>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, int, void>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, void, void, int>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, int, long, Foo>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, Foo, bool, long, int>::result, std::false_type>::value, "");
+    static_assert(std::is_same<d::is_in<Bar, Foo, void, void, int, void>::result, std::false_type>::value, "");
 
     // unique means no duplicate types, no voids
     static_assert(std::is_same<
