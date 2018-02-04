@@ -6,6 +6,7 @@
 .idea/**/libraries
 .idea/**/inspectionProfiles/*
 .idea/dictionaries
+.idea/codeStyles
 .idea_modules/
 cmake-build-debug/*
 !cmake-build-debug/.gitkeep
