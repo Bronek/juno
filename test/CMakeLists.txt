@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 3.6)
-project(tst)
+cmake_minimum_required(VERSION 3.8)
+cmake_policy(SET CMP0037 OLD)
+project(test)
 
 set(SOURCE_FILES type_set.cpp type_tag.cpp)
 
