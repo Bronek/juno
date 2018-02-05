@@ -12,12 +12,12 @@ namespace juno {
     namespace juno_impl {
         template<typename T> struct tag {
             using type = T;
-            constexpr static char tag_ = 0;
+            constexpr static char Tag = 0;
             const static uintptr_t value;
         };
 
         template<typename T>
-        const uintptr_t tag<T>::value = reinterpret_cast<uintptr_t>(&tag_);
+        const uintptr_t tag<T>::value = reinterpret_cast<uintptr_t>(&Tag);
     }
 
     template<typename T> class tag

@@ -17,119 +17,110 @@ namespace juno {
     namespace juno_impl_set {
         template<typename ...L> struct contains;
         template<> struct contains<void> {
-            using result = true_;
+            constexpr static bool value = true;
         };
         template<typename T> struct contains<T> {
-            using result = false_;
+            constexpr static bool value = false;
         };
         template<typename T, typename ...L> struct contains<T, T, L...> {
-            using result = true_;
+            constexpr static bool value = true;
         };
         template<typename T, typename U, typename ...L> struct contains<T, U, L...> {
-            using result = typename contains<T, L...>::result;
+            constexpr static bool value = contains<T, L...>::value;
         };
 
         template <typename ...L> struct set_impl;
         template <typename ...L> struct join;
         template <typename ...L> struct join<set_impl<L...>, void> {
-            using result = set_impl<L...>;
+            using type = set_impl<L...>;
         };
         template <typename T, typename ...L> struct join<set_impl<L...>, T> {
-            using result = set_impl<T, L...>; // T must come first, so set_impl can drop "void"
+            using type = set_impl<T, L...>; // T must come first, so set_impl can drop "void"
         };
 
         template <typename ...L> struct contains_set;
         template <typename ...P, typename ...L> struct contains_set<set_impl<P...>, set_impl<L...>> {
-            using set_ = set_impl<L...>;
-            using result = typename and_<
-                    typename contains<typename set_::head, P...>::result
-                    , typename contains_set<set_impl<P...>, typename set_::tail>::result
-            >::result;
+            using Set = set_impl<L...>;
+            constexpr static bool value = contains<typename Set::head, P...>::value
+                    && contains_set<set_impl<P...>, typename Set::tail>::value;
         };
         template <typename ...L> struct contains_set<set_impl<L...>, set_impl<>> {
-            using result = true_;
+            constexpr static bool value = true;
         };
 
         template <typename ...L> struct intersects_set;
         template <typename ...P, typename ...L> struct intersects_set<set_impl<P...>, set_impl<L...>> {
-            using set_ = set_impl<P...>;
-            using result = typename or_<
-                    typename contains<typename set_::head, L...>::result
-                    , typename intersects_set<typename set_::tail, set_impl<L...>>::result
-            >::result;
+            using Set = set_impl<P...>;
+            constexpr static bool value = contains<typename Set::head, L...>::value
+                    || intersects_set<typename Set::tail, set_impl<L...>>::value;
         };
         template <typename ...L> struct intersects_set<set_impl<>, set_impl<L...>> {
-            using result = false_;
+            constexpr static bool value = false;
         };
 
         template <typename ...L> struct join_set;
         template <typename ...P, typename ...L> struct join_set<set_impl<P...>, set_impl<L...>> {
-            using result = typename set_impl<P..., L...>::unique;
+            using type = typename set_impl<P..., L...>::unique;
         };
 
         template <typename ...L> struct cross_set;
         template <typename ...L> struct cross_set<set_impl<>, set_impl<L...>> {
-            using result = set_impl<>;
+            using type = set_impl<>;
         };
         template <typename T, typename ...P, typename ...L> struct cross_set<set_impl<T, P...>, set_impl<L...>> {
-            using tail = typename cross_set<set_impl<P...>, set_impl<L...>>::result;
-            using result = typename if_<
-                    typename contains<T, L...>::result
-                    , typename join<tail, T>::result
-                    , tail
-            >::result;
+            using Tail = typename cross_set<set_impl<P...>, set_impl<L...>>::type;
+            using type = typename if_<
+                    contains<T, L...>::value
+                    , typename join<Tail, T>::type
+                    , Tail
+            >::type;
         };
 
         template <typename ...L> struct less_set;
         template <typename ...L> struct less_set<set_impl<>, set_impl<L...>> {
-            using result = set_impl<>;
+            using type = set_impl<>;
         };
         template <typename T, typename ...P, typename ...L> struct less_set<set_impl<T, P...>, set_impl<L...>> {
-            using tail = typename less_set<set_impl<P...>, set_impl<L...>>::result;
-            using result = typename if_<
-                    typename contains<T, L...>::result
-                    , tail
-                    , typename join<tail, T>::result
-            >::result;
+            using Tail = typename less_set<set_impl<P...>, set_impl<L...>>::type;
+            using type = typename if_<
+                    contains<T, L...>::value
+                    , Tail
+                    , typename join<Tail, T>::type
+            >::type;
         };
 
         template <typename ...L> struct set_impl<void, L...> {
             using unique = typename set_impl<L...>::unique;
             using head = typename set_impl<L...>::head;
             using tail = typename set_impl<L...>::tail;
-            using make = typename set_impl<L...>::make;
-            using empty = typename set_impl<L...>::empty;
         };
         template <> struct set_impl<> {
             using unique = set_impl<>;
             using head = void;
             using tail = set_impl<>;
-            using make = set<>;
-            using empty = true_;
+            using type = set<>;
+            using empty = std::true_type;
 
-            inline constexpr static std::size_t size() { return 0; }
+            constexpr static std::size_t size = 0;
         };
         template <typename T, typename ...L> struct set_impl<T, L...> {
-            using contains_ = typename contains<T, L...>::result;
-            using unique = typename if_<
-                    contains_
+            constexpr static bool Contains = contains<T, L...>::value;
+            using unique = typename if_<Contains
                     , typename set_impl<L...>::unique
-                    , typename join<typename set_impl<L...>::unique, T>::result
-            >::result;
-            using head = typename if_<
-                    contains_
+                    , typename join<typename set_impl<L...>::unique, T>::type
+            >::type;
+            using head = typename if_<Contains
                     , typename set_impl<L...>::head
                     , T
-            >::result;
-            using tail = typename if_<
-                    contains_
+            >::type;
+            using tail = typename if_<Contains
                     , typename set_impl<L...>::tail
                     , set_impl<L...>
-            >::result;
-            using make = set<T, L...>;
-            using empty = false_;
+            >::type;
+            using type = set<T, L...>;
+            using empty = std::false_type;
 
-            inline constexpr static std::size_t size() { return 1 + set_impl<L...>::size(); }
+            constexpr static std::size_t size = 1 + set_impl<L...>::size;
         };
     }
 
@@ -142,104 +133,94 @@ namespace juno {
     public:
         template <typename T>
         class is_same_set {
-            using result = typename and_<
-                    typename juno_impl_set::contains_set<impl, typename T::impl>::result
-                    , typename juno_impl_set::contains_set<typename T::impl, impl>::result
-            >::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::contains_set<impl, typename T::impl>::value
+                    && juno_impl_set::contains_set<typename T::impl, impl>::value;
         };
 
         template <typename ...P>
         class is_same {
-            using U = typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            using result = typename and_<
-                    typename juno_impl_set::contains_set<impl, typename U::unique>::result
-                    , typename juno_impl_set::contains_set<typename U::unique, impl>::result
-            >::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::contains_set<impl, typename Set::unique>::value
+                    && juno_impl_set::contains_set<typename Set::unique, impl>::value;
         };
 
         template <typename T>
         class contains_set {
-            using result = typename juno_impl_set::contains_set<impl, typename T::impl>::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::contains_set<impl, typename T::impl>::value;
         };
 
         template <typename ...P>
         class contains {
-            using U = typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            using result = typename juno_impl_set::contains_set<impl, typename U::unique>::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::contains_set<impl, typename Set::unique>::value;
         };
 
         template <typename T>
         class intersects_set {
-            using result = typename juno_impl_set::intersects_set<impl, typename T::impl>::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::intersects_set<impl, typename T::impl>::value;
         };
 
         template <typename ...P>
         class intersects {
-            using U =  typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            using result = typename juno_impl_set::intersects_set<impl, typename U::unique>::result;
         public:
-            constexpr static bool value = result::value;
+            constexpr static bool value = juno_impl_set::intersects_set<impl, typename Set::unique>::value;
         };
 
         // Mathematical term is "union"
         template <typename T>
         class join_set{
         public:
-            using type = typename juno_impl_set::join_set<impl, typename T::impl>::result::make;
+            using type = typename juno_impl_set::join_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
         class join {
-            using U =  typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
         public:
-            using type = typename juno_impl_set::join_set<impl, typename U::unique>::result::make;
+            using type = typename juno_impl_set::join_set<impl, typename Set::unique>::type::type;
         };
 
         // Mathematical term is "intersection"
         template <typename T>
         class cross_set {
         public:
-            using type = typename juno_impl_set::cross_set<impl, typename T::impl>::result::make;
+            using type = typename juno_impl_set::cross_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
         class cross {
-            using U =  typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
         public:
-            using type = typename juno_impl_set::cross_set<impl, typename U::unique>::result::make;
+            using type = typename juno_impl_set::cross_set<impl, typename Set::unique>::type::type;
         };
 
         // Mathematical term is "relative complement"
         template <typename T>
         class less_set {
         public:
-            using type = typename juno_impl_set::less_set<impl, typename T::impl>::result::make;
+            using type = typename juno_impl_set::less_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
         class less {
-            using U =  typename juno_impl_set::set_impl<
+            using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
         public:
-            using type = typename juno_impl_set::less_set<impl, typename U::unique>::result::make;
+            using type = typename juno_impl_set::less_set<impl, typename Set::unique>::type::type;
         };
 
-        constexpr static std::size_t size = impl::size();
+        constexpr static std::size_t size = impl::size;
         using empty = typename impl::empty;
     };
 }

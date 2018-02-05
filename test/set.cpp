@@ -182,38 +182,38 @@ TEST(set, type_set__details_unique)
     struct Foo; struct Bar;
 
     // can't find actual type in an empty list
-    static_assert(std::is_same<juno_impl_set::contains<int>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Foo>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, void>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Foo, void, void>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Foo, void, void, void>::result, std::false_type>::value);
+    static_assert(not juno_impl_set::contains<int>::value);
+    static_assert(not juno_impl_set::contains<Foo>::value);
+    static_assert(not juno_impl_set::contains<int, void>::value);
+    static_assert(not juno_impl_set::contains<Foo, void, void>::value);
+    static_assert(not juno_impl_set::contains<Foo, void, void, void>::value);
 
     // can find void, i.e. no-element, in any list including empty one
-    static_assert(std::is_same<juno_impl_set::contains<void>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<void, void>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<void, Foo>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<void, Foo, void, bool>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<void, Foo, Bar, int, bool>::result, std::true_type>::value);
+    static_assert(juno_impl_set::contains<void>::value);
+    static_assert(juno_impl_set::contains<void, void>::value);
+    static_assert(juno_impl_set::contains<void, Foo>::value);
+    static_assert(juno_impl_set::contains<void, Foo, void, bool>::value);
+    static_assert(juno_impl_set::contains<void, Foo, Bar, int, bool>::value);
 
     // look for actual type where we expect to find it
-    static_assert(std::is_same<juno_impl_set::contains<int, int>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, int, void>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, void, int>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, void, int, void>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, void, void, int>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, int, long, Foo>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, Foo, Bar, long, int>::result, std::true_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<int, Foo, void, void, int, void>::result, std::true_type>::value);
+    static_assert(juno_impl_set::contains<int, int>::value);
+    static_assert(juno_impl_set::contains<int, int, void>::value);
+    static_assert(juno_impl_set::contains<int, void, int>::value);
+    static_assert(juno_impl_set::contains<int, void, int, void>::value);
+    static_assert(juno_impl_set::contains<int, void, void, int>::value);
+    static_assert(juno_impl_set::contains<int, int, long, Foo>::value);
+    static_assert(juno_impl_set::contains<int, Foo, Bar, long, int>::value);
+    static_assert(juno_impl_set::contains<int, Foo, void, void, int, void>::value);
 
     // look for actual type where we do not expect to find it
-    static_assert(std::is_same<juno_impl_set::contains<Bar, int>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, int, void>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, void, int>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, void, int, void>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, void, void, int>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, int, long, Foo>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, Foo, bool, long, int>::result, std::false_type>::value);
-    static_assert(std::is_same<juno_impl_set::contains<Bar, Foo, void, void, int, void>::result, std::false_type>::value);
+    static_assert(not juno_impl_set::contains<Bar, int>::value);
+    static_assert(not juno_impl_set::contains<Bar, int, void>::value);
+    static_assert(not juno_impl_set::contains<Bar, void, int>::value);
+    static_assert(not juno_impl_set::contains<Bar, void, int, void>::value);
+    static_assert(not juno_impl_set::contains<Bar, void, void, int>::value);
+    static_assert(not juno_impl_set::contains<Bar, int, long, Foo>::value);
+    static_assert(not juno_impl_set::contains<Bar, Foo, bool, long, int>::value);
+    static_assert(not juno_impl_set::contains<Bar, Foo, void, void, int, void>::value);
 
     // unique means no duplicate types, no voids
     static_assert(std::is_same<
