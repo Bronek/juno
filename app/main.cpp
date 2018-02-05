@@ -14,13 +14,13 @@ int main() {
     using namespace juno;
     struct Foo; struct Bar; struct Fuz;
     using fb = set<Foo, Bar>;
-    static_assert(fb::contains<Foo, Bar>());
-    static_assert(fb::contains<Bar>());
-    static_assert(fb::contains<>());
-    static_assert(not fb::contains<Fuz, Bar>());
-    static_assert(fb::intersects<Fuz, Bar>());
-    using fbf = decltype(fb::join<Fuz, Bar>());
-    static_assert(fbf::is_same<Foo, Fuz, Bar>());
-    using ff = decltype(fbf::less<Bar>());
-    static_assert(ff::is_same_set<set<Foo, Fuz>>());
+    static_assert(fb::contains<Foo, Bar>::value);
+    static_assert(fb::contains<Bar>::value);
+    static_assert(fb::contains<>::value);
+    static_assert(not fb::contains<Fuz, Bar>::value);
+    static_assert(fb::intersects<Fuz, Bar>::value);
+    using fbf = typename fb::join<Fuz, Bar>::type;
+    static_assert(fbf::is_same<Foo, Fuz, Bar>::value);
+    using ff = typename fbf::less<Bar>::type;
+    static_assert(ff::is_same_set<set<Foo, Fuz>>::value);
 }

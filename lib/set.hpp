@@ -141,87 +141,105 @@ namespace juno {
 
     public:
         template <typename T>
-        inline constexpr static bool is_same_set() {
-            return and_<
+        class is_same_set {
+            using result = typename and_<
                     typename juno_impl_set::contains_set<impl, typename T::impl>::result
                     , typename juno_impl_set::contains_set<typename T::impl, impl>::result
-            >::result::value;
-        }
+            >::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         template <typename ...P>
-        inline constexpr static bool is_same() {
-            using U =  typename juno_impl_set::set_impl<
+        class is_same {
+            using U = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return and_<
+            using result = typename and_<
                     typename juno_impl_set::contains_set<impl, typename U::unique>::result
                     , typename juno_impl_set::contains_set<typename U::unique, impl>::result
-            >::result::value;
-        }
+            >::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         template <typename T>
-        inline constexpr static bool contains_set() {
-            return juno_impl_set::contains_set<impl, typename T::impl>::result::value;
-        }
+        class contains_set {
+            using result = typename juno_impl_set::contains_set<impl, typename T::impl>::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         template <typename ...P>
-        inline constexpr static bool contains() {
-            using U =  typename juno_impl_set::set_impl<
+        class contains {
+            using U = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return juno_impl_set::contains_set<impl, typename U::unique>::result::value;
-        }
+            using result = typename juno_impl_set::contains_set<impl, typename U::unique>::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         template <typename T>
-        inline constexpr static bool intersects_set() {
-            return juno_impl_set::intersects_set<impl, typename T::impl>::result::value;
-        }
+        class intersects_set {
+            using result = typename juno_impl_set::intersects_set<impl, typename T::impl>::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         template <typename ...P>
-        inline constexpr static bool intersects() {
+        class intersects {
             using U =  typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return juno_impl_set::intersects_set<impl, typename U::unique>::result::value;
-        }
+            using result = typename juno_impl_set::intersects_set<impl, typename U::unique>::result;
+        public:
+            constexpr static bool value = result::value;
+        };
 
         // Mathematical term is "union"
         template <typename T>
-        inline constexpr static auto join_set() {
-            return typename juno_impl_set::join_set<impl, typename T::impl>::result::make();
-        }
+        class join_set{
+        public:
+            using type = typename juno_impl_set::join_set<impl, typename T::impl>::result::make;
+        };
 
         template <typename ...P>
-        inline constexpr static auto join() {
+        class join {
             using U =  typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return typename juno_impl_set::join_set<impl, typename U::unique>::result::make();
-        }
+        public:
+            using type = typename juno_impl_set::join_set<impl, typename U::unique>::result::make;
+        };
 
         // Mathematical term is "intersection"
         template <typename T>
-        inline constexpr static auto cross_set() {
-            return typename juno_impl_set::cross_set<impl, typename T::impl>::result::make();
-        }
+        class cross_set {
+        public:
+            using type = typename juno_impl_set::cross_set<impl, typename T::impl>::result::make;
+        };
 
         template <typename ...P>
-        inline constexpr static auto cross() {
+        class cross {
             using U =  typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return typename juno_impl_set::cross_set<impl, typename U::unique>::result::make();
-        }
+        public:
+            using type = typename juno_impl_set::cross_set<impl, typename U::unique>::result::make;
+        };
 
         // Mathematical term is "relative complement"
         template <typename T>
-        inline constexpr static auto less_set() {
-            return typename juno_impl_set::less_set<impl, typename T::impl>::result::make();
-        }
+        class less_set {
+        public:
+            using type = typename juno_impl_set::less_set<impl, typename T::impl>::result::make;
+        };
 
         template <typename ...P>
-        inline constexpr static auto less() {
+        class less {
             using U =  typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-            return typename juno_impl_set::less_set<impl, typename U::unique>::result::make();
-        }
+        public:
+            using type = typename juno_impl_set::less_set<impl, typename U::unique>::result::make;
+        };
 
-        inline constexpr static std::size_t size() { return impl::size(); }
-        inline constexpr static bool empty() { return impl::empty::value; }
+        constexpr static std::size_t size = impl::size();
+        using empty = typename impl::empty;
     };
 }
