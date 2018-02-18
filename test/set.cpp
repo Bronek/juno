@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Bronislaw (Bronek) Kozicki
+// Copyright (c) 2017-2018 Bronislaw (Bronek) Kozicki
 //
 // Distributed under the MIT License. See accompanying file LICENSE
 // or copy at https://opensource.org/licenses/MIT
@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include <set.hpp>
+#include <tag.hpp>
 
 TEST(set, type_set__basic)
 {
@@ -112,7 +113,7 @@ TEST(set, type_set__basic)
     >::is_same_set<set<int, long>>::value);
 
     // "join_set" performs union of sets
-    using setAB = typename setA::join_set<setB>::type;
+    using setAB = typename setA::insert_set<setB>::type;
     static_assert(setAB::is_same_set<set<int, Foo, Fuz, Baz, Bar>>::value);
     static_assert(setAB::is_same<Bar, Baz, int, Foo, Fuz>::value);
     static_assert(not setAB::empty::value);
@@ -121,26 +122,26 @@ TEST(set, type_set__basic)
     static_assert(not setAB::is_same_set<setA>::value);
     static_assert(not setAB::is_same_set<setB>::value);
     static_assert(not setAB::is_same_set<set<Bar, Baz, int>>::value);
-    static_assert(setAB::is_same_set<typename setA::join<Fuz, Baz>::type>::value);
+    static_assert(setAB::is_same_set<typename setA::insert<Fuz, Baz>::type>::value);
     // union of sets is commutative
-    static_assert(setAB::is_same_set<typename setB::join_set<setA>::type>::value);
-    static_assert(setAB::is_same_set<typename setB::join<int, Bar, Foo>::type>::value);
+    static_assert(setAB::is_same_set<typename setB::insert_set<setA>::type>::value);
+    static_assert(setAB::is_same_set<typename setB::insert<int, Bar, Foo>::type>::value);
 
-    // more testing of join_set
+    // more testing of insert_set
     static_assert(set<int, long, unsigned long>::is_same_set<
-            typename set<int, long>::join<unsigned long>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join<long>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join<int>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join<int, long>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join<void>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join<>::type>::value);
+            typename set<int, long>::insert<unsigned long>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert<long>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert<int>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert<int, long>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert<void>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert<>::type>::value);
 
-    static_assert(set<void>::is_same_set<typename set<>::join_set<set<>>::type>::value);
-    static_assert(set<>::is_same_set<typename set<>::join_set<set<void>>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<>::join_set<set<const int, long&&>>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int>::join_set<set<int, long>>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long>::join_set<set<int, long>>::type>::value);
-    static_assert(set<int, long>::is_same_set<typename set<int, long&&>::join_set<set<const int&>>::type>::value);
+    static_assert(set<void>::is_same_set<typename set<>::insert_set<set<>>::type>::value);
+    static_assert(set<>::is_same_set<typename set<>::insert_set<set<void>>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<>::insert_set<set<const int, long&&>>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int>::insert_set<set<int, long>>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long>::insert_set<set<int, long>>::type>::value);
+    static_assert(set<int, long>::is_same_set<typename set<int, long&&>::insert_set<set<const int&>>::type>::value);
 
     // intersection of sets
     static_assert(set<>::is_same_set<typename set<>::cross_set<set<>>::type>::value);
@@ -157,18 +158,18 @@ TEST(set, type_set__basic)
     static_assert(set<Baz, Bar>::is_same_set<typename set<int, Baz, Foo, void, Bar>::cross<void, long, Fuz, Bar, Baz>::type>::value);
 
     // difference of sets
-    static_assert(set<>::is_same_set<typename set<>::less_set<set<>>::type>::value);
-    static_assert(set<>::is_same_set<typename set<>::less<>::type>::value);
-    static_assert(set<int>::is_same_set<typename set<int>::less<>::type>::value);
-    static_assert(set<>::is_same_set<typename set<>::less<int>::type>::value);
-    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo>::less<>::type>::value);
-    static_assert(set<>::is_same_set<typename set<>::less<int, Foo>::type>::value);
-    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo>::less<Bar>::type>::value);
-    static_assert(set<Bar>::is_same_set<typename set<Bar>::less<int, Foo>::type>::value);
-    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo, Baz>::less<Bar, Baz>::type>::value);
-    static_assert(set<Bar>::is_same_set<typename set<Bar, Baz>::less<int, Foo, Baz>::type>::value);
-    static_assert(set<>::is_same_set<typename set<Baz, const Bar, int&>::less<int&&, Baz, Bar>::type>::value);
-    static_assert(set<int, Foo>::is_same_set<typename set<int, Baz, Foo, void, Bar>::less<void, long, Fuz, Bar, Baz>::type>::value);
+    static_assert(set<>::is_same_set<typename set<>::remove_set<set<>>::type>::value);
+    static_assert(set<>::is_same_set<typename set<>::remove<>::type>::value);
+    static_assert(set<int>::is_same_set<typename set<int>::remove<>::type>::value);
+    static_assert(set<>::is_same_set<typename set<>::remove<int>::type>::value);
+    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo>::remove<>::type>::value);
+    static_assert(set<>::is_same_set<typename set<>::remove<int, Foo>::type>::value);
+    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo>::remove<Bar>::type>::value);
+    static_assert(set<Bar>::is_same_set<typename set<Bar>::remove<int, Foo>::type>::value);
+    static_assert(set<int, Foo>::is_same_set<typename set<int, Foo, Baz>::remove<Bar, Baz>::type>::value);
+    static_assert(set<Bar>::is_same_set<typename set<Bar, Baz>::remove<int, Foo, Baz>::type>::value);
+    static_assert(set<>::is_same_set<typename set<Baz, const Bar, int&>::remove<int&&, Baz, Bar>::type>::value);
+    static_assert(set<int, Foo>::is_same_set<typename set<int, Baz, Foo, void, Bar>::remove<void, long, Fuz, Bar, Baz>::type>::value);
 
     SUCCEED();
 }

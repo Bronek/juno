@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Bronislaw (Bronek) Kozicki
+// Copyright (c) 2017-2018 Bronislaw (Bronek) Kozicki
 //
 // Distributed under the MIT License. See accompanying file LICENSE
 // or copy at https://opensource.org/licenses/MIT
@@ -9,6 +9,7 @@
 
 #include <type_traits>
 #include <cstdint>
+#include <utility>
 
 namespace juno {
     template <typename ...L> struct set;
@@ -177,13 +178,13 @@ namespace juno {
 
         // Mathematical term is "union"
         template <typename T>
-        class join_set{
+        class insert_set{
         public:
             using type = typename juno_impl_set::join_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
-        class join {
+        class insert {
             using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
         public:
@@ -207,13 +208,13 @@ namespace juno {
 
         // Mathematical term is "relative complement"
         template <typename T>
-        class less_set {
+        class remove_set {
         public:
             using type = typename juno_impl_set::less_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
-        class less {
+        class remove {
             using Set = typename juno_impl_set::set_impl<
                     typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
         public:
