@@ -7,6 +7,7 @@
 
 #include <mpl.hpp>
 #include <set.hpp>
+#include <tagset.hpp>
 #include <cassert>
 
 struct Foo; struct Bar; struct Fuz;
@@ -22,6 +23,16 @@ int main() {
     const auto fn = [](auto*, int& i) { return (i++ < 3); };
     assert(fbf::for_each(fn, i));
     assert(i == 3);
+
+    auto&& ts = tagset{}.insert_set<fbf>();
+    assert((ts.contains<Bar, Fuz>()));
+    assert(ts.contains<>());
+    assert((not ts.contains_set<set<int, Bar, Fuz>>()));
+
+    const auto ts1 = std::move(ts);
+    assert(not ts1.empty());
+    assert((ts1.intersects<int, Foo>()));
+    assert(not ts1.intersects<>());
 
     std::puts("Ta-Da!");
     return 0;
