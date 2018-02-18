@@ -7,6 +7,7 @@
 
 #include <mpl.hpp>
 #include <set.hpp>
+#include <cassert>
 
 struct Foo; struct Bar; struct Fuz;
 
@@ -17,6 +18,10 @@ int main() {
     static_assert(fbf::is_same<Fuz, Foo, Bar>::value);
     static_assert(fbf::contains<Bar, Fuz>::value);
     static_assert(not fbf::contains<long, Fuz>::value);
+    int i = 0;
+    const auto fn = [](auto*, int& i) { return (i++ < 3); };
+    assert(fbf::for_each(fn, i));
+    assert(i == 3);
 
     std::puts("Ta-Da!");
     return 0;

@@ -174,6 +174,50 @@ TEST(set, type_set__basic)
     SUCCEED();
 }
 
+TEST(set, type_set__for_each)
+{
+    const auto fn1 = [](auto*  , int& i) -> bool { ++i; return true; };
+
+    using namespace juno;
+    int count = 0;
+    ASSERT_TRUE((set<>::for_each(fn1, count)));
+    ASSERT_TRUE((set<void>::for_each(fn1, count)));
+    ASSERT_TRUE((set<void, void>::for_each(fn1, count)));
+    ASSERT_EQ(count, 0);
+    ASSERT_TRUE((set<int, void, void>::for_each(fn1, count)));
+    ASSERT_EQ(count, 1);
+    count = 0;
+    ASSERT_TRUE((set<int, long>::for_each(fn1, count)));
+    ASSERT_EQ(count, 2);
+    count = 0;
+    ASSERT_TRUE((set<int, long, const int>::for_each(fn1, count)));
+    ASSERT_EQ(count, 2); // "const int" is same as "int", see ref_cv_stripping below
+
+    std::set<size_t> tags;
+    auto fn2 = [](auto* p, std::set<size_t>& d) -> bool {
+        if (not d.insert(tag<typename std::remove_pointer<decltype(p)>::type>::value).second)
+            throw std::runtime_error("unexpected duplicate");
+        return true;
+    };
+    class Foo; class Bar;
+    ASSERT_TRUE((set<int, int, Bar&, long, Foo&&, long, const Bar, const Foo&>::for_each(std::move(fn2), tags)));
+    ASSERT_EQ(tags.size(), 4);
+    ASSERT_EQ(tags.count(tag<int>::value), 1);
+    ASSERT_EQ(tags.count(tag<long>::value), 1);
+    ASSERT_EQ(tags.count(tag<Foo>::value), 1);
+    ASSERT_EQ(tags.count(tag<Bar>::value), 1);
+    ASSERT_EQ(tags.count(tag<void*>::value), 0);
+
+    int c = 0;
+    auto fn3 = [&c](auto* ) -> bool {
+        // Visit 3 types (counting from 0), then abort
+        return (++c <= 2);
+    };
+
+    ASSERT_FALSE((set<Foo, Bar, int, double>::for_each(fn3)));
+    ASSERT_EQ(c, 3);
+}
+
 TEST(set, type_set__details_unique)
 {
     // test that duplicate elements are ignored and void is used to denote non-element

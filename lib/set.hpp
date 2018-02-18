@@ -90,6 +90,30 @@ namespace juno {
             >::type;
         };
 
+        template <typename ...L> struct apply_impl;
+        template <> struct apply_impl<set_impl<>> {
+            template <typename U, typename ...A> static bool apply(U&& , A&& ... ) { return true; }
+            template <typename U, typename ...A> static bool apply(U& , A&& ... ) { return true; }
+            template <typename U, typename ...A> static bool apply(const U& , A&& ... ) { return true; }
+        };
+        template <typename T, typename ...L> struct apply_impl<set_impl<T, L...>> {
+            template <typename U, typename ...A> static bool apply(U&& fn, A&& ... a) {
+                if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
+                    return false;
+                return apply_impl<set_impl<L...>>::apply(std::move(fn), std::forward<A>(a)...);
+            }
+            template <typename U, typename ...A> static bool apply(U& fn, A&& ... a) {
+                if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
+                    return false;
+                return apply_impl<set_impl<L...>>::apply(fn, std::forward<A>(a)...);
+            }
+            template <typename U, typename ...A> static bool apply(const U& fn, A&& ... a) {
+                if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
+                    return false;
+                return apply_impl<set_impl<L...>>::apply(fn, std::forward<A>(a)...);
+            }
+        };
+
         template <typename ...L> struct set_impl<void, L...> {
             using unique = typename set_impl<L...>::unique;
             using head = typename set_impl<L...>::head;
@@ -223,5 +247,20 @@ namespace juno {
 
         constexpr static std::size_t size = impl::size;
         using empty = typename impl::empty;
+
+        template <typename T, typename ...A>
+        static bool for_each(T&& fn, A&& ... a) {
+            return juno_impl_set::apply_impl<impl>::apply(std::move(fn), std::forward<A>(a)...);
+        }
+
+        template <typename T, typename ...A>
+        static bool for_each(T& fn, A&& ... a) {
+            return juno_impl_set::apply_impl<impl>::apply(fn, std::forward<A>(a)...);
+        }
+
+        template <typename T, typename ...A>
+        static bool for_each(const T& fn, A&& ... a) {
+            return juno_impl_set::apply_impl<impl>::apply(fn, std::forward<A>(a)...);
+        }
     };
 }
