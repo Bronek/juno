@@ -8,14 +8,6 @@
 .idea/dictionaries
 .idea/codeStyles
 .idea_modules/
-cmake-build-debug/*
-!cmake-build-debug/.gitkeep
-cmake-build-release/*
-!cmake-build-release/.gitkeep
-cmake-build-clang/*
-!cmake-build-clang/.gitkeep
-cmake-build-gcc/*
-!cmake-build-gcc/.gitkeep
 *.iws
 *.swp
 ~$*.doc
