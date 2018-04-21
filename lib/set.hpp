@@ -15,7 +15,7 @@ namespace juno {
     template <typename ...L> struct set;
 
     // details of set implementation, to ensure uniqueness of types stored in a set_impl
-    namespace juno_impl_set {
+    namespace impl_set {
         template<typename ...L> struct contains;
         template<> struct contains<void> {
             constexpr static bool value = true;
@@ -92,25 +92,13 @@ namespace juno {
 
         template <typename ...L> struct apply_impl;
         template <> struct apply_impl<set_impl<>> {
-            template <typename U, typename ...A> static bool apply(U&& , A&& ... ) { return true; }
-            template <typename U, typename ...A> static bool apply(U& , A&& ... ) { return true; }
-            template <typename U, typename ...A> static bool apply(const U& , A&& ... ) { return true; }
+            template <typename U, typename ...A> static bool apply(U&& , A&& ... ) noexcept { return true; }
         };
         template <typename T, typename ...L> struct apply_impl<set_impl<T, L...>> {
-            template <typename U, typename ...A> static bool apply(U&& fn, A&& ... a) {
+            template <typename U, typename ...A> static bool apply(U&& fn, A&& ... a) noexcept {
                 if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
                     return false;
-                return apply_impl<set_impl<L...>>::apply(std::move(fn), std::forward<A>(a)...);
-            }
-            template <typename U, typename ...A> static bool apply(U& fn, A&& ... a) {
-                if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
-                    return false;
-                return apply_impl<set_impl<L...>>::apply(fn, std::forward<A>(a)...);
-            }
-            template <typename U, typename ...A> static bool apply(const U& fn, A&& ... a) {
-                if (not fn(static_cast<T*>(nullptr), std::forward<A>(a)...))
-                    return false;
-                return apply_impl<set_impl<L...>>::apply(fn, std::forward<A>(a)...);
+                return apply_impl<set_impl<L...>>::apply(std::forward<U>(fn), std::forward<A>(a)...);
             }
         };
 
@@ -147,120 +135,76 @@ namespace juno {
 
             constexpr static std::size_t size = 1 + set_impl<L...>::size;
         };
+
+        template <typename ...P>
+        using impl = typename impl_set::set_impl<
+                typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>::unique;
     }
 
     template <typename ...L> struct set {
     private:
         template <typename ...P> friend struct set;
-        using impl = typename juno_impl_set::set_impl<
-                typename std::remove_cv<typename std::remove_reference<L>::type>::type ...>::unique;
+        using impl = impl_set::impl<L...>;
 
     public:
-        template <typename T>
-        class is_same_set {
-        public:
-            constexpr static bool value = juno_impl_set::contains_set<impl, typename T::impl>::value
-                    && juno_impl_set::contains_set<typename T::impl, impl>::value;
-        };
-
-        template <typename ...P>
-        class is_same {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            constexpr static bool value = juno_impl_set::contains_set<impl, typename Set::unique>::value
-                    && juno_impl_set::contains_set<typename Set::unique, impl>::value;
-        };
+        constexpr static std::size_t size = impl::size;
+        constexpr static bool empty = impl::empty::value;
 
         template <typename T>
-        class contains_set {
-        public:
-            constexpr static bool value = juno_impl_set::contains_set<impl, typename T::impl>::value;
-        };
+        constexpr static bool is_same_set = impl_set::contains_set<impl, typename T::impl>::value
+                                            && impl_set::contains_set<typename T::impl, impl>::value;
 
         template <typename ...P>
-        class contains {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            constexpr static bool value = juno_impl_set::contains_set<impl, typename Set::unique>::value;
-        };
+        constexpr static bool is_same = is_same_set<typename impl_set::impl<P...>::type>;
 
         template <typename T>
-        class intersects_set {
-        public:
-            constexpr static bool value = juno_impl_set::intersects_set<impl, typename T::impl>::value;
-        };
+        constexpr static bool contains_set = impl_set::contains_set<impl, typename T::impl>::value;
 
         template <typename ...P>
-        class intersects {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            constexpr static bool value = juno_impl_set::intersects_set<impl, typename Set::unique>::value;
-        };
+        constexpr static bool contains = contains_set<typename impl_set::impl<P...>::type>;
+
+        template <typename T>
+        constexpr static bool intersects_set = impl_set::intersects_set<impl, typename T::impl>::value;
+
+        template <typename ...P>
+        constexpr static bool intersects = intersects_set<typename impl_set::impl<P...>::type>;
 
         // Mathematical term is "union"
         template <typename T>
-        class insert_set{
-        public:
-            using type = typename juno_impl_set::join_set<impl, typename T::impl>::type::type;
+        struct insert_set {
+            using type = typename impl_set::join_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
-        class insert {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            using type = typename juno_impl_set::join_set<impl, typename Set::unique>::type::type;
+        struct insert {
+            using type = typename insert_set<typename impl_set::impl<P...>::type>::type;
         };
 
         // Mathematical term is "intersection"
         template <typename T>
-        class cross_set {
-        public:
-            using type = typename juno_impl_set::cross_set<impl, typename T::impl>::type::type;
+        struct cross_set {
+            using type = typename impl_set::cross_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
-        class cross {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            using type = typename juno_impl_set::cross_set<impl, typename Set::unique>::type::type;
+        struct cross {
+            using type = typename cross_set<typename impl_set::impl<P...>::type>::type;
         };
 
         // Mathematical term is "relative complement"
         template <typename T>
-        class remove_set {
-        public:
-            using type = typename juno_impl_set::less_set<impl, typename T::impl>::type::type;
+        struct remove_set {
+            using type = typename impl_set::less_set<impl, typename T::impl>::type::type;
         };
 
         template <typename ...P>
-        class remove {
-            using Set = typename juno_impl_set::set_impl<
-                    typename std::remove_cv<typename std::remove_reference<P>::type>::type ...>;
-        public:
-            using type = typename juno_impl_set::less_set<impl, typename Set::unique>::type::type;
+        struct remove {
+            using type = typename remove_set<typename impl_set::impl<P...>::type>::type;
         };
 
-        constexpr static std::size_t size = impl::size;
-        using empty = typename impl::empty;
-
         template <typename T, typename ...A>
-        static bool for_each(T&& fn, A&& ... a) {
-            return juno_impl_set::apply_impl<impl>::apply(std::move(fn), std::forward<A>(a)...);
-        }
-
-        template <typename T, typename ...A>
-        static bool for_each(T& fn, A&& ... a) {
-            return juno_impl_set::apply_impl<impl>::apply(fn, std::forward<A>(a)...);
-        }
-
-        template <typename T, typename ...A>
-        static bool for_each(const T& fn, A&& ... a) {
-            return juno_impl_set::apply_impl<impl>::apply(fn, std::forward<A>(a)...);
+        static bool for_each(T&& fn, A&& ... a) noexcept {
+            return impl_set::apply_impl<impl>::apply(std::forward<T>(fn), std::forward<A>(a)...);
         }
     };
 }
