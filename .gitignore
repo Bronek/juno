@@ -1,13 +1,7 @@
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/dynamic.xml
-.idea/**/uiDesigner.xml
-.idea/**/gradle.xml
-.idea/**/libraries
-.idea/**/inspectionProfiles/*
-.idea/dictionaries
-.idea/codeStyles
+.idea/
 .idea_modules/
+.vs/
 *.iws
-*.swp
+*.sw?
+*~
 ~$*.doc
