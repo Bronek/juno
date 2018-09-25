@@ -16,12 +16,15 @@ namespace juno {
     namespace impl_map {
         template <typename ...L> struct impl;
 
+        template <typename TagT> struct wrap {};
+
         template <>
         struct impl<> {
             using set = juno::set<>;
-        };
 
-        template <typename TagT> struct wrap {};
+            template <typename AnyT>
+            void get(wrap<AnyT>) const  = delete;
+        };
 
         template <typename MyT, typename MyV, typename ...L>
         struct impl<MyT, MyV, L...> : impl<L...> {

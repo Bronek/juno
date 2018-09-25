@@ -15,17 +15,17 @@ namespace juno {
         using Data = std::unordered_set<uintptr_t, Hash>;
         Data data_;
 
-        explicit tagset(Data&& d) : data_(std::move(d)) { }
+        constexpr explicit tagset(Data&& d) : data_(std::move(d)) { }
 
     public:
-        tagset() : data_(typename Data::size_type(0)) { }
-        tagset(tagset&& ) noexcept = default;
-        tagset(const tagset& ) = default;
+        constexpr tagset() : data_(typename Data::size_type(0)) { }
+        constexpr tagset(tagset&& ) noexcept = default;
+        constexpr tagset(const tagset& ) = default;
 
         tagset& operator=(tagset&& ) & noexcept = default;
         tagset& operator=(const tagset& ) & = default;
 
-        bool operator==(const tagset& rh) const noexcept {
+        constexpr bool operator==(const tagset& rh) const noexcept {
             return this->data_ == rh.data_;
         }
 
@@ -41,24 +41,24 @@ namespace juno {
 
         // Note, with the exception of copy assignment (above), all member functions
         // are non-mutating and will return new value when necessary instead.
-        bool empty() const noexcept { return data_.empty(); }
-        size_t size() const noexcept { return data_.size(); }
-        const_iterator begin() const noexcept { return data_.begin(); }
-        const_iterator end() const noexcept { return data_.begin(); }
+        constexpr bool empty() const noexcept { return data_.empty(); }
+        constexpr size_t size() const noexcept { return data_.size(); }
+        constexpr const_iterator begin() const noexcept { return data_.begin(); }
+        constexpr const_iterator end() const noexcept { return data_.begin(); }
 
         template <typename T>
-        bool is_same_set() const noexcept {
+        constexpr bool is_same_set() const noexcept {
             return T::size == data_.size() && this->contains_set<T>();
         }
 
         template <typename ...P>
-        bool is_same() const noexcept {
+        constexpr bool is_same() const noexcept {
             using Set = set<P ...>;
             return this->is_same_set<Set>();
         }
 
         template <typename T>
-        bool contains_set() const noexcept {
+        constexpr bool contains_set() const noexcept {
             auto fn = [](auto* p, const Data& d) noexcept -> bool {
                 return d.count(tag<typename std::remove_pointer<decltype(p)>::type>::value) == 1;
             };
@@ -66,13 +66,13 @@ namespace juno {
         }
 
         template <typename ...P>
-        bool contains() const noexcept {
+        constexpr bool contains() const noexcept {
             using Set = set<P ...>;
             return this->contains_set<Set>();
         }
 
         template <typename T>
-        bool intersects_set() const noexcept {
+        constexpr bool intersects_set() const noexcept {
             auto fn = [](auto* p, const Data& d) noexcept -> bool {
                 return d.count(tag<typename std::remove_pointer<decltype(p)>::type>::value) == 0;
             };
@@ -80,14 +80,14 @@ namespace juno {
         }
 
         template <typename ...P>
-        bool intersects() const noexcept {
+        constexpr bool intersects() const noexcept {
             using Set = set<P ...>;
             return this->intersects_set<Set>();
         }
 
         // Mathematical term is "union"
         template <typename T>
-        tagset insert_set() const noexcept {
+        constexpr tagset insert_set() const noexcept {
             Data result(data_.size() + T::size);
             auto fn = [](auto* p, const Data& me, Data& r) noexcept -> bool {
                 const auto value = tag<typename std::remove_pointer<decltype(p)>::type>::value;
@@ -102,14 +102,14 @@ namespace juno {
         }
 
         template <typename ...P>
-        tagset insert() const noexcept {
+        constexpr tagset insert() const noexcept {
             using Set = set<P ...>;
             return this->insert_set<Set>();
         }
 
         // Mathematical term is "intersection"
         template <typename T>
-        tagset cross_set() const noexcept {
+        constexpr tagset cross_set() const noexcept {
             Data result;
             auto fn = [](auto* p, const Data& me, Data& r) noexcept -> bool {
                 const auto value = tag<typename std::remove_pointer<decltype(p)>::type>::value;
@@ -123,14 +123,14 @@ namespace juno {
         }
 
         template <typename ...P>
-        tagset cross() const noexcept {
+        constexpr tagset cross() const noexcept {
             using Set = set<P ...>;
             return this->cross_set<Set>();
         }
 
         // Mathematical term is "relative complement"
         template <typename T>
-        tagset remove_set() const noexcept {
+        constexpr tagset remove_set() const noexcept {
             Data result = data_;
             auto fn = [](auto* p, Data& r) noexcept -> bool {
                 r.erase(tag<typename std::remove_pointer<decltype(p)>::type>::value);
@@ -141,7 +141,7 @@ namespace juno {
         }
 
         template <typename ...P>
-        tagset remove() const noexcept {
+        constexpr tagset remove() const noexcept {
             using Set = set<P ...>;
             return this->remove_set<Set>();
         }

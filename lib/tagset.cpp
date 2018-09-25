@@ -4,3 +4,7 @@
 // or copy at https://opensource.org/licenses/MIT
 
 #include "tagset.hpp"
+
+namespace juno {
+    template class tagset<std::hash<uintptr_t>>;
+}

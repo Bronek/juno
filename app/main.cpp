@@ -37,7 +37,7 @@ int main() {
     static_assert(fbf::contains<Bar, Fuz>);
     static_assert(not fbf::contains<long, Fuz>);
     int i = 0;
-    const auto fn = [](auto*, int& i) { return (i++ < 3); };
+    constexpr auto fn = [](auto*, int& i) { return (i++ < 3); };
     assert(fbf::for_each(fn, i));
     assert(i == 3);
 

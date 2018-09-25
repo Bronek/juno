@@ -203,7 +203,7 @@ namespace juno {
         };
 
         template <typename T, typename ...A>
-        static bool for_each(T&& fn, A&& ... a) noexcept {
+        constexpr static bool for_each(T&& fn, A&& ... a) noexcept {
             return impl_set::apply_impl<impl>::apply(std::forward<T>(fn), std::forward<A>(a)...);
         }
     };
