@@ -1,0 +1,29 @@
+BasedOnStyle: Google
+AccessModifierOffset: -4
+AlignConsecutiveDeclarations: true
+AlwaysBreakTemplateDeclarations: false
+BreakBeforeBinaryOperators: All
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+BreakConstructorInitializersBeforeComma: true
+ColumnLimit: 96
+IndentWidth: 4
+Language: Cpp
+NamespaceIndentation: Inner
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+Standard: Cpp11
+TabWidth: 4
+UseTab: Never
