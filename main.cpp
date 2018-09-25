@@ -1,4 +1,7 @@
 #include <cstdio>
+#include <iostream>
+#include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -129,19 +132,73 @@ public:
     template <typename T> using insert = typename set_impl::unique<Check, T, L...>::type;
 };
 
-// clang-format off
-struct Baz { Baz() = delete; };
-struct Bar { Bar() = delete; };
-struct Fuz { Fuz() = delete; };
-// clang-format on
+namespace map_impl {
+
+template <typename T> struct wrap {
+    constexpr explicit wrap() = default;
+    using type = T;
+};
+
+template <template <typename> typename CheckT, template <typename> typename CheckV,
+          typename... L>
+struct impl;
+template <template <typename> typename CheckT, template <typename> typename CheckV>
+struct impl<CheckT, CheckV> {
+    using selectors = set<CheckT>;
+    constexpr explicit impl() = default;
+    constexpr static void pair() noexcept;
+};
+template <template <typename> typename CheckT, template <typename> typename CheckV, typename T,
+          typename V, typename... L>
+struct impl<CheckT, CheckV, T, V, L...> : impl<CheckT, CheckV, L...> {
+    using check = typename CheckV<V>::type;
+    using base = impl<CheckT, CheckV, L...>;
+    using selectors = typename base::selectors::template insert<T>;
+    static_assert(not base::selectors ::template test<T>);
+    constexpr explicit impl() = default;
+    using base::pair;
+    constexpr static auto pair(wrap<T>) noexcept { return wrap<check>(); }
+};
+
+}  // namespace map_impl
+
+template <template <typename> typename CheckT, template <typename> typename CheckV,
+          typename... L>
+class map {
+    using impl = map_impl::impl<CheckT, CheckV, L...>;
+
+public:
+    constexpr map() = default;
+    template <typename T, typename V> constexpr auto insert() const noexcept
+    {
+        using result = map<CheckT, CheckV, T, V, L...>;
+        return result();
+    }
+
+    using set = typename impl::selectors;
+    template <typename U> using type = typename decltype(impl::pair(map_impl::wrap<U>()))::type;
+};
+
+struct IFuzzer {
+    virtual ~IFuzzer() = default;
+    virtual std::string fuzz(std::string) const = 0;
+};
+
+struct Fuz {};
 
 struct Foo {
-    int i = 0;
-
-    template <typename Set> constexpr explicit Foo(Set)
+    template <typename Map> Foo(Map)
     {
-        if constexpr ((bool)Set::template test<Bar>) i += 1;
+        if constexpr ((bool)Map::set::template test<Fuz>) {
+            fuzz = std::make_unique<typename Map::template type<Fuz>>();
+        }
     }
+
+    std::unique_ptr<IFuzzer> fuzz;
+};
+
+struct Fuzzer : IFuzzer {
+    std::string fuzz(std::string n) const override { return n + "-fuzz!"; }
 };
 
 template <typename T> struct PlainTypes {
@@ -150,22 +207,22 @@ template <typename T> struct PlainTypes {
     using type = T;
 };
 
+template <typename T> struct PlainNotVoid {
+    static_assert(std::is_same_v<T, std::decay_t<T>>);
+    static_assert(not std::is_void_v<T>);
+    using type = T;
+};
+
 int main()
 {
-    constexpr static set<PlainTypes> s0{};
     // clang-format off
-    constexpr static auto s1 = decltype(s0)
-        ::insert<Baz>
-        ::insert<Fuz>{};
+    constexpr static auto m1 = map<PlainTypes, PlainNotVoid>{}
+        .insert<Fuz, Fuzzer>();
     // clang-format on
 
-    constexpr static Foo foo1{s1};
-    std::printf("foo1.i=%d\n", foo1.i);
-
-    // clang-format off
-    constexpr static auto s2 = decltype(s1)
-        ::insert<Bar>{};
-    // clang-format on
-    constexpr static Foo foo2{s2};
-    std::printf("foo2.i=%d\n", foo2.i);
+    const Foo foo{m1};
+    if (foo.fuzz)
+        std::cout << foo.fuzz->fuzz("Hello") << std::endl;
+    else
+        std::cout << "Sad Panda" << std::endl;
 }
