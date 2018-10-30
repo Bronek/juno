@@ -179,18 +179,85 @@ public:
     template <typename U> using type = typename decltype(impl::pair(map_impl::wrap<U>()))::type;
 };
 
+namespace val_impl {
+
+template <typename T> struct wrap {
+    constexpr explicit wrap() = default;
+    using type = T;
+};
+
+template <template <typename> typename CheckT, template <typename> typename CheckV, typename... L>
+struct impl;
+
+template <template <typename> typename CheckT, template <typename> typename CheckV>
+struct impl<CheckT, CheckV> {
+    using selectors = set<CheckT>;
+    constexpr explicit impl() = default;
+    constexpr static void pair() noexcept;
+    constexpr static void type() noexcept;
+};
+
+template <template <typename> typename CheckT, template <typename> typename CheckV, typename T,
+    typename V, typename... L>
+struct impl<CheckT, CheckV, T, V, L...> : impl<CheckT, CheckV, L...> {
+    using check = typename CheckV<V>::type;
+    using base = impl<CheckT, CheckV, L...>;
+    using selectors = typename base::selectors::template insert<T>;
+    static_assert(not base::selectors ::template test<T>);
+
+    constexpr impl(const impl<CheckT, CheckV, L...>& b, const check& v)
+        : impl<CheckT, CheckV, L...>(b), val_(v) {}
+    using base::pair;
+    constexpr const auto& pair(wrap<T>) const noexcept { return val_; }
+    using base::type;
+    constexpr auto type(wrap<T>) const noexcept { return wrap<V>{}; }
+private:
+    check val_;
+};
+
+}  // namespace val_impl
+
+template <template <typename> typename CheckT, template <typename> typename CheckV,
+    typename... L>
+class val {
+    template <template <typename> typename, template <typename> typename, typename ...> friend class val;
+    using impl = val_impl::impl<CheckT, CheckV, L...>;
+    impl val_;
+
+    constexpr explicit val(const impl& v) : val_(v) {}
+
+public:
+    constexpr val() = default;
+    template <typename T, typename V> constexpr auto insert(const V& v) const noexcept
+    {
+        using result = val<CheckT, CheckV, T, V, L...>;
+        using rimpl = typename result::impl;
+        return result(rimpl(val_, v));
+    }
+
+    using set = typename impl::selectors;
+    template <typename U> using type = typename decltype(impl::type(val_impl::wrap<U>()))::type;
+
+    template <typename U>
+    constexpr auto get() const noexcept { return val_.pair(val_impl::wrap<U>()); }
+
+    template <typename U, typename ...A>
+    constexpr auto run(A&& ...a) const noexcept { return get<U>()(std::forward<A>(a)...); }
+};
+
 struct IFuzzer {
     virtual ~IFuzzer() = default;
     virtual std::string fuzz(std::string) const = 0;
 };
 
 struct Fuz {};
+struct Baz {};
 
 struct Foo {
-    template <typename Map> Foo(Map)
+    template <typename Val> Foo(const Val& val)
     {
-        if constexpr ((bool)Map::set::template test<Fuz>) {
-            fuzz = std::make_unique<typename Map::template type<Fuz>>();
+        if constexpr ((bool)Val::set::template test<Fuz>) {
+            fuzz = val.template run<Fuz>(val.template get<Baz>());
         }
     }
 
@@ -198,7 +265,9 @@ struct Foo {
 };
 
 struct Fuzzer : IFuzzer {
-    std::string fuzz(std::string n) const override { return n + "-fuzz!"; }
+    const int i = {};
+    explicit Fuzzer(int i) : i(i) {}
+    std::string fuzz(std::string n) const override { return n + std::to_string(i); }
 };
 
 template <typename T> struct PlainTypes {
@@ -216,13 +285,12 @@ template <typename T> struct PlainNotVoid {
 int main()
 {
     // clang-format off
-    constexpr static auto m1 = map<PlainTypes, PlainNotVoid>{}
-        .insert<Fuz, Fuzzer>();
+    constexpr static auto m1 = val<PlainTypes, PlainNotVoid>{}
+        .insert<Fuz>([](int v){ return std::make_unique<Fuzzer>(v); })
+        .insert<Baz>(42);
     // clang-format on
 
     const Foo foo{m1};
     if (foo.fuzz)
-        std::cout << foo.fuzz->fuzz("Hello") << std::endl;
-    else
-        std::cout << "Sad Panda" << std::endl;
+        std::cout << foo.fuzz->fuzz("Hello ") << std::endl;
 }
