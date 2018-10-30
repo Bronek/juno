@@ -253,23 +253,6 @@ struct IFuzzer {
 struct Fuz {};
 struct Baz {};
 
-struct Foo {
-    template <typename Val> Foo(const Val& val)
-    {
-        if constexpr ((bool)Val::set::template test<Fuz>) {
-            fuzz = val.template run<Fuz>(val.template get<Baz>());
-        }
-    }
-
-    std::unique_ptr<IFuzzer> fuzz;
-};
-
-struct Fuzzer : IFuzzer {
-    const int i = {};
-    explicit Fuzzer(int i) : i(i) {}
-    std::string fuzz(std::string n) const override { return n + std::to_string(i); }
-};
-
 template <typename T> struct PlainTypes {
     static_assert(std::is_same_v<T, std::decay_t<T>>);
     static_assert(not std::is_pointer_v<T>);
@@ -280,6 +263,23 @@ template <typename T> struct PlainNotVoid {
     static_assert(std::is_same_v<T, std::decay_t<T>>);
     static_assert(not std::is_void_v<T>);
     using type = T;
+};
+
+struct Foo {
+    template <typename ... L, typename =
+        std::enable_if_t<map<PlainTypes, PlainNotVoid, L...>::set::template test<Fuz>>>
+    explicit Foo(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        fuzz = v.template run<Fuz>(v.template get<Baz>());
+    }
+
+    std::unique_ptr<IFuzzer> fuzz;
+};
+
+struct Fuzzer : IFuzzer {
+    const int i = {};
+    explicit Fuzzer(int i) : i(i) {}
+    std::string fuzz(std::string n) const override { return n + std::to_string(i); }
 };
 
 int main()
