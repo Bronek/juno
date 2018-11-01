@@ -80,6 +80,7 @@ template <template <typename> typename Check> struct unique<Check> {
     constexpr static bool compare = How<0, 0, Size>::value;
 
     template <typename U> constexpr static bool test = contains_detail<Check, U>::value;
+    template <typename F> constexpr static bool apply(const F&) noexcept { return true; }
 };
 template <template <typename> typename Check, typename T, typename... L>
 struct unique<Check, T, L...> {
@@ -94,6 +95,14 @@ struct unique<Check, T, L...> {
         = How<size, intersect_detail<unchecked_list<T, L...>, U>::size, Size>::value;
     template <typename U>
     constexpr static bool test = contains_detail<Check, U, T, L...>::value;
+
+    template <typename F> constexpr static bool apply(const F& fn) noexcept
+    {
+        if constexpr (not std::is_void_v<T> && not contains_detail<Check, T, L...>::value) {
+            if (not fn((const T*)nullptr)) return false;
+        }
+        return unique<Check, L...>::apply(fn);
+    }
 };
 
 }  // namespace set_impl
@@ -130,6 +139,9 @@ public:
                                          typename Check<T>::type>::type;
 
     template <typename T> using insert = typename set_impl::unique<Check, T, L...>::type;
+
+    template <typename F>
+	constexpr static bool for_each(const F& fn) noexcept { return impl::apply(fn); }
 };
 
 namespace map_impl {
@@ -299,4 +311,11 @@ int main()
 
     const Foo foo{m1};
     if (foo.fuzz) std::cout << foo.fuzz->fuzz("Hello ") << std::endl;
+
+    constexpr static auto s1 = set<PlainTypes>::insert<int>::insert<Baz>::insert<Fuz>();
+    s1.for_each([](const auto* d) -> bool {
+        using type = decltype(*d);
+        std::cout << typeid(type).name() << std::endl;
+        return true;
+    });
 }
