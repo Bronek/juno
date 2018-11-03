@@ -140,8 +140,10 @@ public:
 
     template <typename T> using insert = typename set_impl::unique<Check, T, L...>::type;
 
-    template <typename F>
-	constexpr static bool for_each(const F& fn) noexcept { return impl::apply(fn); }
+    template <typename F> constexpr static bool for_each(const F& fn) noexcept
+    {
+        return impl::apply(fn);
+    }
 };
 
 namespace map_impl {
@@ -301,21 +303,163 @@ struct Fuzzer : IFuzzer {
     std::string fuzz(std::string n) const override { return n + std::to_string(i); }
 };
 
-int main()
+struct Ver1 {};
+struct Ver2 {};
+
+template <typename T> struct PlatformSel {
+    using type = T;
+};
+template <typename T> struct MarketDataSel {
+    using type = T;
+};
+
+template <typename T> void foo(T);
+
+template <typename... L> void foo(const val<PlainTypes, PlainNotVoid, L...>& v)
 {
-    // clang-format off
+    auto fuz = v.template run<Fuz>(v.template get<Baz>());
+    std::cout << fuz.fuzz("Hello ") << std::endl;
+    using Val = std::decay_t<decltype(v)>;
+    std::cout << "foo " << Val::set::size << ' ' << typeid(Val).name() << std::endl;
+}
+
+template <typename... L> void foo(const val<MarketDataSel, PlainNotVoid, L...>& v)
+{
+    using Val = std::decay_t<decltype(v)>;
+    std::cout << "foo " << Val::set::size << ' ' << typeid(Val).name() << std::endl;
+}
+
+template <typename... L>
+std::enable_if_t<val<PlatformSel, PlainNotVoid, L...>::set::template test<Ver1>> foo(
+    const val<PlatformSel, PlainNotVoid, L...>& v)
+{
+    using Val = std::decay_t<decltype(v)>;
+    std::cout << "foo Ver1 " << Val::set::size << ' ' << typeid(Val).name() << std::endl;
+}
+
+template <typename... L>
+std::enable_if_t<val<PlatformSel, PlainNotVoid, L...>::set::template test<Ver2>> foo(
+    const val<PlatformSel, PlainNotVoid, L...>& v)
+{
+    using Val = std::decay_t<decltype(v)>;
+    std::cout << "foo Ver2 " << Val::set::size << ' ' << typeid(Val).name() << std::endl;
+}
+
+template <typename Context> void baz(const Context& f)
+{
+    using Far = std::decay_t<decltype(f.logger)>;
+    std::cout << "baz " << typeid(Far).name() << std::endl;
+}
+
+struct Logger {};
+
+struct MyContext {
+    Logger& logger;
+};
+
+struct CommandLine {
+    CommandLine(int argv, char* const* argc)
+    {  // ...
+    }
+};
+
+enum ConfigurationSelector {};
+struct Configuration {
+    explicit Configuration(const CommandLine& cmdline)
+    {  // ...
+    }
+};
+
+enum PlatformServicesSelector {};
+struct PlatformServices {
+    template <typename... L>
+    explicit PlatformServices(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        const auto& conf = *v.template get<ConfigurationSelector>();
+    }
+};
+
+enum MarketPriceInputsSelector {};
+struct MarketPriceInputs {
+    template <typename... L>
+    explicit MarketPriceInputs(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        const auto& conf = *v.template get<ConfigurationSelector>();
+        const auto& plat = *v.template get<PlatformServicesSelector>();
+    }
+};
+
+enum ClientPriceCalcSelector {};
+struct ClientPriceCalc {
+    template <typename... L>
+    explicit ClientPriceCalc(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        const auto& conf = *v.template get<ConfigurationSelector>();
+        const auto& mark = *v.template get<MarketPriceInputsSelector>();
+    }
+};
+
+enum NetworkOutputSelector {};
+struct NetworkOutput {
+    template <typename... L>
+    explicit NetworkOutput(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        const auto& conf = *v.template get<ConfigurationSelector>();
+    }
+};
+
+struct ClientPriceOutput {
+    template <typename... L>
+    explicit ClientPriceOutput(const val<PlainTypes, PlainNotVoid, L...>& v)
+    {
+        const auto& conf = *v.template get<ConfigurationSelector>();
+        const auto& price = *v.template get<ClientPriceCalcSelector>();
+        auto&       out = *v.template get<NetworkOutputSelector>();
+    }
+};
+
+int main(int argv, char** argc)
+{
     constexpr static auto m1 = val<PlainTypes, PlainNotVoid>{}
-        .insert<Fuz>([](int v){ return std::make_unique<Fuzzer>(v); })
-        .insert<Baz>(42);
-    // clang-format on
+                                   .insert<Fuz>([](int v) { return Fuzzer(v); })
+                                   .insert<Baz>(13);
+    foo(m1);
 
-    const Foo foo{m1};
-    if (foo.fuzz) std::cout << foo.fuzz->fuzz("Hello ") << std::endl;
+    const auto v0 = val<PlainTypes, PlainNotVoid>{};
+    try {
+        const auto cmdln = CommandLine(argv, argc);
+        const auto config = Configuration(cmdln);
+        const auto v1 = v0.insert<ConfigurationSelector>(&config);
+        const auto plsrv = PlatformServices(v1);
+        const auto v2 = v1.insert<PlatformServicesSelector>(&plsrv);
+        const auto input = MarketPriceInputs(v2);
+        const auto v3 = v2.insert<MarketPriceInputsSelector>(&input);
+        const auto price = ClientPriceCalc(v3);
+        auto       output = NetworkOutput(v3);
+        const auto v4
+            = v3.insert<ClientPriceCalcSelector>(&price).insert<NetworkOutputSelector>(&output);
+        const auto clout = ClientPriceOutput(v4);
+    }
+    catch (...) {
+        return 1;
+    }
+    return 0;
+}
 
-    constexpr static auto s1 = set<PlainTypes>::insert<int>::insert<Baz>::insert<Fuz>();
-    s1.for_each([](const auto* d) -> bool {
-        using type = decltype(*d);
-        std::cout << typeid(type).name() << std::endl;
-        return true;
-    });
+#define TEST(x) void testFunction(const char* const s = x)
+
+struct MockConfiguration {};
+struct MockPlatformServices {
+    void push(const char* const) {}
+};
+
+TEST("Test MarketPriceInputs")
+{
+    const auto v0 = val<PlainTypes, PlainNotVoid>{};
+    const auto config = MockConfiguration();
+    auto       plsrv = MockPlatformServices();
+    const auto v1 = v0.insert<ConfigurationSelector>(&config)
+                        .insert<PlatformServicesSelector, const MockPlatformServices*>(&plsrv);
+    auto input = MarketPriceInputs(v1);
+    plsrv.push("Some test inputs");
 }
