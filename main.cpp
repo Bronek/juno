@@ -259,7 +259,9 @@ public:
         return val_.pair(val_impl::wrap<U>());
     }
 
-    template <typename U, typename... A> constexpr auto run(A&&... a) const noexcept
+    template <typename U, typename... A>
+    constexpr auto run(A&&... a) const
+        -> decltype(val_.pair(val_impl::wrap<U>())(std::forward<A>(a)...))
     {
         return get<U>()(std::forward<A>(a)...);
     }
@@ -365,7 +367,8 @@ struct CommandLine {
 
 enum ConfigurationSelector {};
 struct Configuration {
-    explicit Configuration(const CommandLine& cmdline)
+    template <typename... L>
+    explicit Configuration(const val<PlainTypes, PlainNotVoid, L...>&, const CommandLine&)
     {  // ...
     }
 };
@@ -375,7 +378,7 @@ struct PlatformServices {
     template <typename... L>
     explicit PlatformServices(const val<PlainTypes, PlainNotVoid, L...>& v)
     {
-        const auto& conf = *v.template get<ConfigurationSelector>();
+        const auto& conf = v.template run<ConfigurationSelector>(v);
     }
 };
 
@@ -384,8 +387,8 @@ struct MarketPriceInputs {
     template <typename... L>
     explicit MarketPriceInputs(const val<PlainTypes, PlainNotVoid, L...>& v)
     {
-        const auto& conf = *v.template get<ConfigurationSelector>();
-        const auto& plat = *v.template get<PlatformServicesSelector>();
+        const auto& conf = v.template run<ConfigurationSelector>(v);
+        const auto& plat = v.template run<PlatformServicesSelector>(v);
     }
 };
 
@@ -394,8 +397,8 @@ struct ClientPriceCalc {
     template <typename... L>
     explicit ClientPriceCalc(const val<PlainTypes, PlainNotVoid, L...>& v)
     {
-        const auto& conf = *v.template get<ConfigurationSelector>();
-        const auto& mark = *v.template get<MarketPriceInputsSelector>();
+        const auto& conf = v.template run<ConfigurationSelector>(v);
+        const auto& mark = v.template run<MarketPriceInputsSelector>(v);
     }
 };
 
@@ -404,7 +407,8 @@ struct NetworkOutput {
     template <typename... L>
     explicit NetworkOutput(const val<PlainTypes, PlainNotVoid, L...>& v)
     {
-        const auto& conf = *v.template get<ConfigurationSelector>();
+        const auto& conf = v.template run<ConfigurationSelector>(v);
+        const auto& plat = v.template run<PlatformServicesSelector>(v);
     }
 };
 
@@ -412,9 +416,9 @@ struct ClientPriceOutput {
     template <typename... L>
     explicit ClientPriceOutput(const val<PlainTypes, PlainNotVoid, L...>& v)
     {
-        const auto& conf = *v.template get<ConfigurationSelector>();
-        const auto& price = *v.template get<ClientPriceCalcSelector>();
-        auto&       out = *v.template get<NetworkOutputSelector>();
+        const auto& conf = v.template run<ConfigurationSelector>(v);
+        const auto& price = v.template run<ClientPriceCalcSelector>(v);
+        auto&       out = v.template run<NetworkOutputSelector>(v);
     }
 };
 
@@ -425,20 +429,28 @@ int main(int argv, char** argc)
                                    .insert<Baz>(13);
     foo(m1);
 
-    const auto v0 = val<PlainTypes, PlainNotVoid>{};
     try {
         const auto cmdln = CommandLine(argv, argc);
-        const auto config = Configuration(cmdln);
-        const auto v1 = v0.insert<ConfigurationSelector>(&config);
-        const auto plsrv = PlatformServices(v1);
-        const auto v2 = v1.insert<PlatformServicesSelector>(&plsrv);
-        const auto input = MarketPriceInputs(v2);
-        const auto v3 = v2.insert<MarketPriceInputsSelector>(&input);
-        const auto price = ClientPriceCalc(v3);
-        auto       output = NetworkOutput(v3);
-        const auto v4
-            = v3.insert<ClientPriceCalcSelector>(&price).insert<NetworkOutputSelector>(&output);
-        const auto clout = ClientPriceOutput(v4);
+        // clang-format off
+        const auto v = val<PlainTypes, PlainNotVoid>{}
+            .insert<ConfigurationSelector>([cmdln](const auto& v) -> const Configuration& {
+                static auto config = Configuration(v, cmdln);
+                return config;
+            }).insert<PlatformServicesSelector>([](const auto& v) -> const PlatformServices& {
+                static auto plsrv = PlatformServices(v);
+                return plsrv;
+            }).insert<MarketPriceInputsSelector>([](const auto& v) -> const MarketPriceInputs& {
+                static auto input = MarketPriceInputs(v);
+                return input;
+            }).insert<ClientPriceCalcSelector>([](const auto& v) -> const ClientPriceCalc& {
+                static auto price = ClientPriceCalc(v);
+                return price;
+            }).insert<NetworkOutputSelector>([](const auto& v) -> NetworkOutput& {
+                static auto output = NetworkOutput(v);
+                return output;
+            });
+        // clang-format on
+        const auto clout = ClientPriceOutput(v);
     }
     catch (...) {
         return 1;
@@ -455,11 +467,15 @@ struct MockPlatformServices {
 
 TEST("Test MarketPriceInputs")
 {
-    const auto v0 = val<PlainTypes, PlainNotVoid>{};
-    const auto config = MockConfiguration();
-    auto       plsrv = MockPlatformServices();
-    const auto v1 = v0.insert<ConfigurationSelector>(&config)
-                        .insert<PlatformServicesSelector, const MockPlatformServices*>(&plsrv);
-    auto input = MarketPriceInputs(v1);
+    auto        plsrv = MockPlatformServices();
+    const auto* pplsrv = &plsrv;
+    // clang-format off
+    const auto  v = val<PlainTypes, PlainNotVoid>{}
+        .insert<ConfigurationSelector>([](const auto&) {
+            static auto config = MockConfiguration();
+            return config;
+        }).insert<PlatformServicesSelector>([pplsrv](const auto&) { return *pplsrv; });
+    // clang-format on
+    auto input = MarketPriceInputs(v);
     plsrv.push("Some test inputs");
 }
